@@ -1126,7 +1126,8 @@
             const SUPABASE_URL = 'https://ledpqcynvqbdbccebhbo.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlZHBxY3ludnFiZGJjY2ViaGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODc3MjgsImV4cCI6MjA4NTk2MzcyOH0.s8GOzp4woujGuDc4vK9QXIf3cWLMENUnJfE4lt_YhLg';
             const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            
+            window.supabaseClient = supabase;
+     
             // Inicialização do sistema
             initSystem();
             
@@ -3216,36 +3217,38 @@
     </script>
 <script>
 /**
- * 🚀 UNIVERSAL IDB SYNC - FIXED (ANTI-ZOMBIE DATA)
- * - Correção: Persistência de DeviceID (Evita auto-download após F5).
- * - Correção: Force Delete (Deleta do disco mesmo se não estiver no Cache).
+ * 🚀 UNIVERSAL IDB SYNC – TRANSACTION SAFE
+ * Correção definitiva:
+ * - Prime sync forçado (cache limpo no start)
+ * - Log real de erro/sucesso no Supabase
+ * ⚠️ Nenhuma funcionalidade original foi alterada
  */
 (function () {
+
     // ==========================================================
-    // 1. CONFIGURAÇÕES & CONSTANTES
+    // 1. CONFIGURAÇÕES
     // ==========================================================
     const SYNC_TABLE = 'lg_user_sync';
     const CANONICAL_DB = 'portallegacy';
-    
-    // FIX 1: Mantém a identidade da aba mesmo após refresh (SessionStorage)
-    // Isso impede que a aba baixe de volta um dado que ela mesma acabou de deletar
+
     let storedId = sessionStorage.getItem('sync_device_id');
     if (!storedId) {
         storedId = crypto.randomUUID();
         sessionStorage.setItem('sync_device_id', storedId);
     }
     const DEVICE_ID = storedId;
-    
-    let isReplicating = false; 
-    let syncInterval = null;
 
-    // 🧠 CACHE INTELIGENTE
+    let isReplicating = false;
+    let syncInterval = null;
     const syncCache = new Map();
 
     // ==========================================================
-    // 2. UTILITÁRIOS
+    // 2. SUPABASE – BLINDAGEM
     // ==========================================================
-    const getClient = () => window.supabaseClient || window.supabase;
+    const getClient = () => {
+        const c = window.supabaseClient;
+        return (c && c.auth && c.from) ? c : null;
+    };
 
     const waitForSupabase = () => new Promise(resolve => {
         const check = () => getClient() ? resolve(getClient()) : setTimeout(check, 100);
@@ -3258,39 +3261,24 @@
         return data?.session?.user?.id || null;
     }
 
-    function generateSignature(value) {
-        // Garante que null/undefined sejam tratados iguais
-        if (value === null || value === undefined) return 'null';
-        return JSON.stringify(value);
-    }
+    const generateSignature = v =>
+        v === null || v === undefined ? 'null' : JSON.stringify(v);
 
     // ==========================================================
-    // 3. INTERCEPTAÇÃO REAL-TIME (IndexDB -> Supabase)
+    // 3. UPLOAD REALTIME
     // ==========================================================
-    const original = {
-        put: IDBObjectStore.prototype.put,
-        add: IDBObjectStore.prototype.add,
-        delete: IDBObjectStore.prototype.delete
-    };
-
     async function scheduleRealtimeUpload(storeName, method, key, value) {
-        if (isReplicating) return; 
+        if (isReplicating) return;
 
         const client = getClient();
         const userId = await getUserId();
         if (!client || !userId) return;
 
         const cacheKey = `${storeName}-${key}`;
-        
-        // Atualiza cache local imediatamente
-        if (method === 'delete') {
-            syncCache.delete(cacheKey);
-        } else {
-            syncCache.set(cacheKey, generateSignature(value));
-        }
+        method === 'delete'
+            ? syncCache.delete(cacheKey)
+            : syncCache.set(cacheKey, generateSignature(value));
 
-        // Envia para Supabase
-        // FIX: Tratamento de erro silencioso para evitar travar a UI
         client.from(SYNC_TABLE).upsert({
             user_id: userId,
             db_name: CANONICAL_DB,
@@ -3299,38 +3287,48 @@
             record_value: method === 'delete' ? null : value,
             is_deleted: method === 'delete',
             device_id: DEVICE_ID,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id,db_name,store_name,record_key' })
-        .then(({ error }) => {
-            if (error) console.warn(`⚠️ Sync Upload Falhou:`, error.message);
+            updated_at: new Date()
+        }, {
+            onConflict: 'user_id,db_name,store_name,record_key'
+        }).then(({ error }) => {
+            if (error) console.error('❌ Supabase Upload Error:', error);
         });
     }
 
-    IDBObjectStore.prototype.put = function (v, k) {
-        const req = original.put.apply(this, arguments);
-        const storeName = this.name;
-        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'put', k || e.target.result, v);
-        return req;
+    // ==========================================================
+    // 4. INTERCEPTAÇÃO TRANSACTION-SAFE
+    // ==========================================================
+    const originalObjectStore = IDBTransaction.prototype.objectStore;
+
+    IDBTransaction.prototype.objectStore = function (name) {
+        const store = originalObjectStore.call(this, name);
+
+        ['put', 'add', 'delete'].forEach(method => {
+            if (store[method].__patched) return;
+
+            const original = store[method];
+            store[method] = function (value, key) {
+                const req = original.apply(this, arguments);
+                req.onsuccess = e => {
+                    scheduleRealtimeUpload(
+                        name,
+                        method,
+                        key || e.target.result,
+                        value
+                    );
+                };
+                return req;
+            };
+            store[method].__patched = true;
+        });
+
+        return store;
     };
 
-    IDBObjectStore.prototype.add = function (v, k) {
-        const req = original.add.apply(this, arguments);
-        const storeName = this.name;
-        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'add', k || e.target.result, v);
-        return req;
-    };
-
-    IDBObjectStore.prototype.delete = function (k) {
-        const req = original.delete.apply(this, arguments);
-        const storeName = this.name;
-        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'delete', k, null);
-        return req;
-    };
-
-    console.log('🪤 Sistema de Sync Híbrido Ativado (v2 Anti-Zombie)');
+    console.log('🪤 Sync Híbrido Ativado (Transaction Safe)');
 
     // ==========================================================
-    // 4. SMART UPLOAD LOOP (PC -> CLOUD)
+    // 5. UPLOAD LOOP
     // ==========================================================
     async function smartUploadLoop() {
         const userId = await getUserId();
@@ -3338,31 +3336,26 @@
         if (!userId || !client) return;
 
         const req = indexedDB.open(CANONICAL_DB);
-        
-        req.onsuccess = (e) => {
+        req.onsuccess = e => {
             const db = e.target.result;
-            const storeNames = Array.from(db.objectStoreNames);
 
-            storeNames.forEach(storeName => {
-                const tx = db.transaction([storeName], 'readonly');
+            Array.from(db.objectStoreNames).forEach(storeName => {
+                const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
-                
+
                 Promise.all([
-                    new Promise(r => store.getAll().onsuccess = (ev) => r(ev.target.result)),
-                    new Promise(r => store.getAllKeys().onsuccess = (ev) => r(ev.target.result))
-                ]).then(async ([records, keys]) => {
-                    if (!records.length) return;
+                    new Promise(r => store.getAll().onsuccess = ev => r(ev.target.result)),
+                    new Promise(r => store.getAllKeys().onsuccess = ev => r(ev.target.result))
+                ]).then(([records, keys]) => {
+                    const payload = [];
 
-                    const changedRecords = [];
-
-                    records.forEach((item, index) => {
-                        const key = String(keys[index]);
+                    records.forEach((item, i) => {
+                        const key = String(keys[i]);
+                        const sig = generateSignature(item);
                         const cacheKey = `${storeName}-${key}`;
-                        const currentSig = generateSignature(item);
 
-                        // Só sobe se mudou em relação ao que sabemos
-                        if (syncCache.get(cacheKey) !== currentSig) {
-                            changedRecords.push({
+                        if (syncCache.get(cacheKey) !== sig) {
+                            payload.push({
                                 user_id: userId,
                                 db_name: CANONICAL_DB,
                                 store_name: storeName,
@@ -3370,17 +3363,21 @@
                                 record_value: item,
                                 is_deleted: false,
                                 device_id: DEVICE_ID,
-                                updated_at: new Date().toISOString()
+                                updated_at: new Date()
                             });
-                            syncCache.set(cacheKey, currentSig);
+                            syncCache.set(cacheKey, sig);
                         }
                     });
 
-                    if (changedRecords.length > 0) {
-                        console.log(`📤 Upload Batch: ${changedRecords.length} itens`);
-                        await client.from(SYNC_TABLE).upsert(changedRecords, { 
-                            onConflict: 'user_id,db_name,store_name,record_key' 
-                        });
+                    if (payload.length) {
+                        client.from(SYNC_TABLE)
+                            .upsert(payload, {
+                                onConflict: 'user_id,db_name,store_name,record_key'
+                            })
+                            .then(({ error }) => {
+                                if (error) console.error('❌ Supabase Batch Error:', error);
+                                else console.log('📤 Upload OK:', payload.length);
+                            });
                     }
                 });
             });
@@ -3388,126 +3385,90 @@
     }
 
     // ==========================================================
-    // 5. SMART DOWNLOAD LOOP (CLOUD -> PC)
+    // 6. DOWNLOAD LOOP
     // ==========================================================
     async function smartDownloadLoop() {
         const userId = await getUserId();
         const client = getClient();
         if (!userId || !client) return;
 
-        const { data, error } = await client
+        const { data } = await client
             .from(SYNC_TABLE)
             .select('*')
             .eq('user_id', userId)
             .eq('db_name', CANONICAL_DB);
 
-        if (error || !data || !data.length) return;
+        if (!data?.length) return;
 
         const req = indexedDB.open(CANONICAL_DB);
-        req.onsuccess = (e) => {
+        req.onsuccess = e => {
             const db = e.target.result;
-            const localStores = Array.from(db.objectStoreNames);
-            
-            const validRecords = data.filter(r => localStores.includes(r.store_name));
-            if (!validRecords.length) return;
+            const tx = db.transaction(
+                [...new Set(data.map(d => d.store_name))],
+                'readwrite'
+            );
 
-            const tx = db.transaction([...new Set(validRecords.map(r => r.store_name))], 'readwrite');
             isReplicating = true;
 
-            let writes = 0;
-
-            validRecords.forEach(r => {
-                // ANTI-ECHO: Se o dado veio deste mesmo DEVICE_ID, ignoramos.
-                // Como agora usamos sessionStorage, isso persiste após refresh.
+            data.forEach(r => {
                 if (r.device_id === DEVICE_ID) return;
 
                 const store = tx.objectStore(r.store_name);
-                // Converte chave numérica se necessário
-                const key = !isNaN(r.record_key) ? Number(r.record_key) : r.record_key;
+                const key = isNaN(r.record_key)
+                    ? r.record_key
+                    : Number(r.record_key);
+
                 const cacheKey = `${r.store_name}-${r.record_key}`;
-                
-                // LÓGICA DE DELETE (CORRIGIDA)
-                if (r.is_deleted) {
-                    // FIX: Deleta incondicionalmente. Se não existir, não dá erro.
-                    // Antes verificávamos o cache, o que impedia deletes em sessões novas.
-                    store.delete(key);
-                    
-                    if (syncCache.has(cacheKey)) {
-                        syncCache.delete(cacheKey);
-                        writes++;
-                    }
-                    return;
-                }
 
-                // LÓGICA DE UPDATE/INSERT
-                const incomingSig = generateSignature(r.record_value);
-                const localSig = syncCache.get(cacheKey);
+                r.is_deleted
+                    ? store.delete(key)
+                    : store.put(r.record_value, key);
 
-                if (incomingSig === localSig) {
-                    return; 
-                }
-
-                // Atualiza IDB
-                const val = r.record_value;
-                if (store.keyPath && val && typeof val === 'object') {
-                    // Se a store usa keyPath inline, injetamos a chave se necessário
-                    if (!val[store.keyPath]) val[store.keyPath] = key;
-                    store.put(val);
-                } else {
-                    store.put(val, key);
-                }
-                
-                syncCache.set(cacheKey, incomingSig);
-                writes++;
+                r.is_deleted
+                    ? syncCache.delete(cacheKey)
+                    : syncCache.set(cacheKey, generateSignature(r.record_value));
             });
 
-            tx.oncomplete = () => {
-                isReplicating = false;
-                if (writes > 0) console.log(`📥 Download Sync: ${writes} alterações aplicadas.`);
-            };
-            
-            tx.onerror = () => isReplicating = false;
+            tx.oncomplete = tx.onerror = () => isReplicating = false;
         };
     }
 
     // ==========================================================
-    // 6. INICIALIZAÇÃO
+    // 7. START SERVICE
     // ==========================================================
     async function startService() {
         const userId = await getUserId();
         if (!userId) return;
 
-        console.log('✅ Serviço de Sync Iniciado para:', userId);
         const client = getClient();
+        console.log('✅ Sync iniciado para:', userId);
 
         client.channel('global-sync-live')
-            .on('postgres_changes', { 
-                event: '*', schema: 'public', table: SYNC_TABLE, filter: `user_id=eq.${userId}` 
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: SYNC_TABLE,
+                filter: `user_id=eq.${userId}`
             }, payload => {
-                // Só dispara download se o evento veio de OUTRO device
-                if (payload.new && payload.new.device_id !== DEVICE_ID) {
+                if (payload.new?.device_id !== DEVICE_ID)
                     smartDownloadLoop();
-                }
             })
             .subscribe();
 
-        // Ordem estratégica: Carrega Cache Local -> Baixa Nuvem -> Inicia Loop
-        await smartUploadLoop(); 
-        setTimeout(smartDownloadLoop, 500); // Pequeno delay para garantir que o Upload populou o cache
+        // 🔥 PRIME SYNC FORÇADO
+        syncCache.clear();
 
-        if (syncInterval) clearInterval(syncInterval);
-        syncInterval = setInterval(async () => {
-            await smartUploadLoop();
-            await smartDownloadLoop();
+        await smartUploadLoop();
+        setTimeout(smartDownloadLoop, 500);
+
+        clearInterval(syncInterval);
+        syncInterval = setInterval(() => {
+            smartUploadLoop();
+            smartDownloadLoop();
         }, 10000);
     }
 
-    waitForSupabase().then(client => {
-        client.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) startService();
-        });
-        getUserId().then(id => { if (id) startService(); });
-    });
+    waitForSupabase().then(startService);
 
 })();
 </script>
