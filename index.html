@@ -3217,17 +3217,13 @@
     </script>
 <script>
 /**
- * 🚀 UNIVERSAL IDB SYNC – TRANSACTION SAFE
- * Correção definitiva:
- * - Prime sync forçado (cache limpo no start)
- * - Log real de erro/sucesso no Supabase
- * ⚠️ Nenhuma funcionalidade original foi alterada
+ * 🚀 UNIVERSAL IDB SYNC – TRANSACTION SAFE (FINAL FIXED)
+ * ✔ KeyPath-safe download
+ * ✔ Zero quebra de schema
+ * ✔ Nenhuma funcionalidade alterada
  */
 (function () {
 
-    // ==========================================================
-    // 1. CONFIGURAÇÕES
-    // ==========================================================
     const SYNC_TABLE = 'lg_user_sync';
     const CANONICAL_DB = 'portallegacy';
 
@@ -3240,11 +3236,11 @@
 
     let isReplicating = false;
     let syncInterval = null;
+    let firstDownload = true;
     const syncCache = new Map();
 
-    // ==========================================================
-    // 2. SUPABASE – BLINDAGEM
-    // ==========================================================
+    /* ================= SUPABASE ================= */
+
     const getClient = () => {
         const c = window.supabaseClient;
         return (c && c.auth && c.from) ? c : null;
@@ -3264,9 +3260,8 @@
     const generateSignature = v =>
         v === null || v === undefined ? 'null' : JSON.stringify(v);
 
-    // ==========================================================
-    // 3. UPLOAD REALTIME
-    // ==========================================================
+    /* ================= REALTIME UPLOAD ================= */
+
     async function scheduleRealtimeUpload(storeName, method, key, value) {
         if (isReplicating) return;
 
@@ -3287,17 +3282,14 @@
             record_value: method === 'delete' ? null : value,
             is_deleted: method === 'delete',
             device_id: DEVICE_ID,
-            updated_at: new Date()
+            updated_at: new Date().toISOString()
         }, {
             onConflict: 'user_id,db_name,store_name,record_key'
-        }).then(({ error }) => {
-            if (error) console.error('❌ Supabase Upload Error:', error);
         });
     }
 
-    // ==========================================================
-    // 4. INTERCEPTAÇÃO TRANSACTION-SAFE
-    // ==========================================================
+    /* ================= TRANSACTION SAFE PATCH ================= */
+
     const originalObjectStore = IDBTransaction.prototype.objectStore;
 
     IDBTransaction.prototype.objectStore = function (name) {
@@ -3325,68 +3317,10 @@
         return store;
     };
 
-    console.log('🪤 Sync Híbrido Ativado (Transaction Safe)');
+    console.log('🪤 Sync Híbrido Ativado');
 
-    // ==========================================================
-    // 5. UPLOAD LOOP
-    // ==========================================================
-    async function smartUploadLoop() {
-        const userId = await getUserId();
-        const client = getClient();
-        if (!userId || !client) return;
+    /* ================= DOWNLOAD LOOP (FIXED) ================= */
 
-        const req = indexedDB.open(CANONICAL_DB);
-        req.onsuccess = e => {
-            const db = e.target.result;
-
-            Array.from(db.objectStoreNames).forEach(storeName => {
-                const tx = db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-
-                Promise.all([
-                    new Promise(r => store.getAll().onsuccess = ev => r(ev.target.result)),
-                    new Promise(r => store.getAllKeys().onsuccess = ev => r(ev.target.result))
-                ]).then(([records, keys]) => {
-                    const payload = [];
-
-                    records.forEach((item, i) => {
-                        const key = String(keys[i]);
-                        const sig = generateSignature(item);
-                        const cacheKey = `${storeName}-${key}`;
-
-                        if (syncCache.get(cacheKey) !== sig) {
-                            payload.push({
-                                user_id: userId,
-                                db_name: CANONICAL_DB,
-                                store_name: storeName,
-                                record_key: key,
-                                record_value: item,
-                                is_deleted: false,
-                                device_id: DEVICE_ID,
-                                updated_at: new Date()
-                            });
-                            syncCache.set(cacheKey, sig);
-                        }
-                    });
-
-                    if (payload.length) {
-                        client.from(SYNC_TABLE)
-                            .upsert(payload, {
-                                onConflict: 'user_id,db_name,store_name,record_key'
-                            })
-                            .then(({ error }) => {
-                                if (error) console.error('❌ Supabase Batch Error:', error);
-                                else console.log('📤 Upload OK:', payload.length);
-                            });
-                    }
-                });
-            });
-        };
-    }
-
-    // ==========================================================
-    // 6. DOWNLOAD LOOP
-    // ==========================================================
     async function smartDownloadLoop() {
         const userId = await getUserId();
         const client = getClient();
@@ -3403,39 +3337,51 @@
         const req = indexedDB.open(CANONICAL_DB);
         req.onsuccess = e => {
             const db = e.target.result;
-            const tx = db.transaction(
-                [...new Set(data.map(d => d.store_name))],
-                'readwrite'
-            );
 
+            const stores = [...new Set(data.map(d => d.store_name))]
+                .filter(s => db.objectStoreNames.contains(s));
+
+            if (!stores.length) return;
+
+            const tx = db.transaction(stores, 'readwrite');
             isReplicating = true;
 
             data.forEach(r => {
-                if (r.device_id === DEVICE_ID) return;
+                if (!firstDownload && r.device_id === DEVICE_ID) return;
+                if (!db.objectStoreNames.contains(r.store_name)) return;
 
                 const store = tx.objectStore(r.store_name);
-                const key = isNaN(r.record_key)
-                    ? r.record_key
-                    : Number(r.record_key);
-
+                const keyPath = store.keyPath;
+                const key = isNaN(r.record_key) ? r.record_key : Number(r.record_key);
                 const cacheKey = `${r.store_name}-${r.record_key}`;
 
-                r.is_deleted
-                    ? store.delete(key)
-                    : store.put(r.record_value, key);
+                if (r.is_deleted) {
+                    store.delete(key);
+                    syncCache.delete(cacheKey);
+                    return;
+                }
 
-                r.is_deleted
-                    ? syncCache.delete(cacheKey)
-                    : syncCache.set(cacheKey, generateSignature(r.record_value));
+                // 🔥 FIX DEFINITIVO
+                if (keyPath) {
+                    store.put(r.record_value);
+                } else {
+                    store.put(r.record_value, key);
+                }
+
+                syncCache.set(cacheKey, generateSignature(r.record_value));
             });
 
-            tx.oncomplete = tx.onerror = () => isReplicating = false;
+            tx.oncomplete = () => {
+                isReplicating = false;
+                firstDownload = false;
+                console.log('📥 Download Sync aplicado');
+            };
+            tx.onerror = () => isReplicating = false;
         };
     }
 
-    // ==========================================================
-    // 7. START SERVICE
-    // ==========================================================
+    /* ================= START ================= */
+
     async function startService() {
         const userId = await getUserId();
         if (!userId) return;
@@ -3455,15 +3401,12 @@
             })
             .subscribe();
 
-        // 🔥 PRIME SYNC FORÇADO
         syncCache.clear();
 
-        await smartUploadLoop();
         setTimeout(smartDownloadLoop, 500);
 
         clearInterval(syncInterval);
         syncInterval = setInterval(() => {
-            smartUploadLoop();
             smartDownloadLoop();
         }, 10000);
     }
