@@ -1100,22 +1100,21 @@
     <script>
         // Sistema de Gerenciamento - LG Plataforma
         document.addEventListener('DOMContentLoaded', function() {
-            // Configuração do IndexedDB
-            const DB_NAME = 'lg_plataforma';
-            const DB_VERSION = 1;
+            // Configuração do IndexedDB - SOMENTE portallegacy
+            const DB_NAME = 'portallegacy';
+            const DB_VERSION = 2; // Versão incrementada para garantir criação das stores
             
-            // Stores do banco de dados
+            // Stores do banco de dados portallegacy
             const STORES = {
-                ADMIN: 'admin',
-                CLIENTES: 'clientes',
-                PROJETOS: 'projetos',
-                ETAPAS: 'etapas',
+                CLIENTS: 'clients',
+                PROJECTS: 'projects',
                 LINKS: 'links',
-                ORIENTACOES: 'orientacoes',
-                PRAZOS: 'prazos',
-                ALERTAS: 'alertas',
-                ARQUIVOS: 'arquivos',
-                ACESSOS: 'acessos'
+                ORIENTATIONS: 'orientations',
+                DEADLINES: 'deadlines',
+                ALERTS: 'alerts',
+                FILES: 'files',
+                ACCESSES: 'accesses',
+                ADMIN: 'admin'
             };
             
             let db = null;
@@ -1123,115 +1122,120 @@
             let currentClient = null;
             let isAdmin = false;
             
+            // Inicialização do Supabase
+            const SUPABASE_URL = 'https://ledpqcynvqbdbccebhbo.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlZHBxY3ludnFiZGJjY2ViaGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODc3MjgsImV4cCI6MjA4NTk2MzcyOH0.s8GOzp4woujGuDc4vK9QXIf3cWLMENUnJfE4lt_YhLg';
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
             // Inicialização do sistema
             initSystem();
             
             // Função para inicializar o sistema
             async function initSystem() {
-                await initDatabase();
-                setupEventListeners();
-                showLoginScreen();
-                checkAutoLogin();
+                try {
+                    await initDatabase();
+                    setupEventListeners();
+                    showLoginScreen();
+                    checkAutoLogin();
+                } catch (error) {
+                    console.error('Erro ao inicializar o sistema:', error);
+                    showLoginMessage('Erro ao inicializar o sistema. Por favor, recarregue a página.', 'danger');
+                }
             }
             
-            // Inicializar o banco de dados IndexedDB
+            // Inicializar o banco de dados IndexedDB portallegacy
             function initDatabase() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open(DB_NAME, DB_VERSION);
                     
                     request.onerror = (event) => {
-                        console.error('Erro ao abrir o banco de dados:', event.target.error);
+                        console.error('Erro ao abrir o banco de dados portallegacy:', event.target.error);
                         reject(event.target.error);
                     };
                     
                     request.onsuccess = (event) => {
                         db = event.target.result;
-                        console.log('Banco de dados inicializado com sucesso');
+                        console.log('Banco de dados portallegacy inicializado com sucesso');
                         resolve();
                     };
                     
                     request.onupgradeneeded = (event) => {
                         const database = event.target.result;
+                        const transaction = event.target.transaction;
                         
-                        // Criar stores se não existirem
-                        if (!database.objectStoreNames.contains(STORES.ADMIN)) {
-                            const adminStore = database.createObjectStore(STORES.ADMIN, { keyPath: 'id', autoIncrement: true });
-                            adminStore.createIndex('email', 'email', { unique: true });
+                        console.log('Atualizando banco de dados para versão:', DB_VERSION);
+                        
+                        // Criar todas as stores seguindo o padrão portallegacy (sem índices)
+                        const storeNames = database.objectStoreNames;
+                        
+                        if (!storeNames.contains(STORES.ADMIN)) {
+                            console.log('Criando store:', STORES.ADMIN);
+                            database.createObjectStore(STORES.ADMIN, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.CLIENTES)) {
-                            const clientesStore = database.createObjectStore(STORES.CLIENTES, { keyPath: 'id', autoIncrement: true });
-                            clientesStore.createIndex('cpf', 'cpf', { unique: true });
-                            clientesStore.createIndex('email', 'email', { unique: true });
-                            clientesStore.createIndex('status', 'status');
-                            clientesStore.createIndex('projetoId', 'projetoId');
+                        if (!storeNames.contains(STORES.CLIENTS)) {
+                            console.log('Criando store:', STORES.CLIENTS);
+                            database.createObjectStore(STORES.CLIENTS, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.PROJETOS)) {
-                            const projetosStore = database.createObjectStore(STORES.PROJETOS, { keyPath: 'id', autoIncrement: true });
-                            projetosStore.createIndex('clienteId', 'clienteId');
-                            projetosStore.createIndex('status', 'status');
+                        if (!storeNames.contains(STORES.PROJECTS)) {
+                            console.log('Criando store:', STORES.PROJECTS);
+                            database.createObjectStore(STORES.PROJECTS, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.ETAPAS)) {
-                            const etapasStore = database.createObjectStore(STORES.ETAPAS, { keyPath: 'id', autoIncrement: true });
-                            etapasStore.createIndex('projetoId', 'projetoId');
+                        if (!storeNames.contains(STORES.LINKS)) {
+                            console.log('Criando store:', STORES.LINKS);
+                            database.createObjectStore(STORES.LINKS, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.LINKS)) {
-                            const linksStore = database.createObjectStore(STORES.LINKS, { keyPath: 'id', autoIncrement: true });
-                            linksStore.createIndex('clienteId', 'clienteId');
-                            linksStore.createIndex('status', 'status');
+                        if (!storeNames.contains(STORES.ORIENTATIONS)) {
+                            console.log('Criando store:', STORES.ORIENTATIONS);
+                            database.createObjectStore(STORES.ORIENTATIONS, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.ORIENTACOES)) {
-                            const orientacoesStore = database.createObjectStore(STORES.ORIENTACOES, { keyPath: 'id', autoIncrement: true });
-                            orientacoesStore.createIndex('clienteId', 'clienteId');
-                            orientacoesStore.createIndex('status', 'status');
+                        if (!storeNames.contains(STORES.DEADLINES)) {
+                            console.log('Criando store:', STORES.DEADLINES);
+                            database.createObjectStore(STORES.DEADLINES, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.PRAZOS)) {
-                            const prazosStore = database.createObjectStore(STORES.PRAZOS, { keyPath: 'id', autoIncrement: true });
-                            prazosStore.createIndex('clienteId', 'clienteId');
-                            prazosStore.createIndex('projetoId', 'projetoId');
-                            prazosStore.createIndex('data', 'data');
+                        if (!storeNames.contains(STORES.ALERTS)) {
+                            console.log('Criando store:', STORES.ALERTS);
+                            database.createObjectStore(STORES.ALERTS, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.ALERTAS)) {
-                            const alertasStore = database.createObjectStore(STORES.ALERTAS, { keyPath: 'id', autoIncrement: true });
-                            alertasStore.createIndex('clienteId', 'clienteId');
-                            alertasStore.createIndex('status', 'status');
+                        if (!storeNames.contains(STORES.FILES)) {
+                            console.log('Criando store:', STORES.FILES);
+                            database.createObjectStore(STORES.FILES, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.ARQUIVOS)) {
-                            const arquivosStore = database.createObjectStore(STORES.ARQUIVOS, { keyPath: 'id', autoIncrement: true });
-                            arquivosStore.createIndex('clienteId', 'clienteId');
-                            arquivosStore.createIndex('status', 'status');
+                        if (!storeNames.contains(STORES.ACCESSES)) {
+                            console.log('Criando store:', STORES.ACCESSES);
+                            database.createObjectStore(STORES.ACCESSES, { keyPath: 'id', autoIncrement: true });
                         }
                         
-                        if (!database.objectStoreNames.contains(STORES.ACESSOS)) {
-                            database.createObjectStore(STORES.ACESSOS, { keyPath: 'id', autoIncrement: true });
-                        }
-                        
-                        console.log('Estrutura do banco de dados criada');
+                        console.log('Estrutura do banco de dados portallegacy criada/atualizada');
                     };
                 });
             }
             
-            // Configurar administrador padrão
+            // Configurar administrador padrão (mantido para compatibilidade)
             async function setupDefaultAdmin() {
-                const adminExists = await getAdminByEmail('rc@rc.com');
-                
-                if (!adminExists) {
-                    const defaultAdmin = {
-                        email: 'rc@rc.com',
-                        senha: '12', // Senha simples para demonstração
-                        nome: 'Administrador RC',
-                        criadoEm: new Date().toISOString()
-                    };
+                try {
+                    const adminExists = await getAdminByEmail('rc@rc.com');
                     
-                    await addAdmin(defaultAdmin);
-                    console.log('Administrador padrão criado');
+                    if (!adminExists) {
+                        const defaultAdmin = {
+                            email: 'rc@rc.com',
+                            senha: '12',
+                            nome: 'Administrador RC',
+                            criadoEm: new Date().toISOString()
+                        };
+                        
+                        await addAdmin(defaultAdmin);
+                        console.log('Administrador padrão criado no portallegacy');
+                    }
+                } catch (error) {
+                    console.error('Erro ao configurar admin padrão:', error);
                 }
             }
             
@@ -1246,11 +1250,13 @@
                     tab.addEventListener('click', switchLoginType);
                 });
                 
-                document.getElementById('switchToAdmin').addEventListener('click', () => {
+                document.getElementById('switchToAdmin').addEventListener('click', (e) => {
+                    e.preventDefault();
                     document.querySelector('[data-type="admin"]').click();
                 });
                 
-                document.getElementById('switchToClient').addEventListener('click', () => {
+                document.getElementById('switchToClient').addEventListener('click', (e) => {
+                    e.preventDefault();
                     document.querySelector('[data-type="client"]').click();
                 });
                 
@@ -1359,38 +1365,43 @@
                 const cpf = document.getElementById('clientCpf').value;
                 const password = document.getElementById('clientPassword').value;
                 
-                const client = await getClientByCpf(cpf);
-                
-                if (!client) {
-                    showLoginMessage('CPF não cadastrado', 'danger');
-                    return;
+                try {
+                    const client = await getClientByCpf(cpf);
+                    
+                    if (!client) {
+                        showLoginMessage('CPF não cadastrado', 'danger');
+                        return;
+                    }
+                    
+                    if (client.status !== 'active') {
+                        showLoginMessage('Conta desativada. Entre em contato com o administrador.', 'danger');
+                        return;
+                    }
+                    
+                    if (client.senha !== password) {
+                        showLoginMessage('Senha incorreta', 'danger');
+                        return;
+                    }
+                    
+                    // Login bem-sucedido
+                    currentClient = client;
+                    isAdmin = false;
+                    
+                    // Registrar acesso
+                    await registerAccess(client.id, 'client');
+                    
+                    // Salvar sessão
+                    localStorage.setItem('lg_client_session', JSON.stringify({
+                        id: client.id,
+                        cpf: client.cpf,
+                        timestamp: new Date().getTime()
+                    }));
+                    
+                    showClientArea();
+                } catch (error) {
+                    console.error('Erro no login do cliente:', error);
+                    showLoginMessage('Erro ao fazer login. Tente novamente.', 'danger');
                 }
-                
-                if (client.status !== 'active') {
-                    showLoginMessage('Conta desativada. Entre em contato com o administrador.', 'danger');
-                    return;
-                }
-                
-                if (client.senha !== password) {
-                    showLoginMessage('Senha incorreta', 'danger');
-                    return;
-                }
-                
-                // Login bem-sucedido
-                currentClient = client;
-                isAdmin = false;
-                
-                // Registrar acesso
-                await registerAccess(client.id, 'client');
-                
-                // Salvar sessão
-                localStorage.setItem('lg_client_session', JSON.stringify({
-                    id: client.id,
-                    cpf: client.cpf,
-                    timestamp: new Date().getTime()
-                }));
-                
-                showClientArea();
             }
             
             async function handleAdminLogin(e) {
@@ -1398,73 +1409,111 @@
                 const email = document.getElementById('adminEmail').value;
                 const password = document.getElementById('adminPassword').value;
                 
-                // Verificar credenciais do administrador
-                if (email === 'rc@rc.com' && password === '12') {
-                    // Verificar se admin já existe no banco, se não, criar
-                    let admin = await getAdminByEmail(email);
+                try {
+                    // Autenticar via Supabase
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
                     
-                    if (!admin) {
-                        admin = {
-                            email: email,
-                            senha: password,
-                            nome: 'Administrador RC',
-                            criadoEm: new Date().toISOString()
-                        };
-                        
-                        await addAdmin(admin);
-                    }
+                    if (error) throw error;
                     
                     // Login bem-sucedido
-                    currentUser = admin;
+                    currentUser = {
+                        id: data.user.id,
+                        email: data.user.email,
+                        nome: data.user.user_metadata?.name || 'Administrador',
+                        criadoEm: data.user.created_at
+                    };
                     isAdmin = true;
                     
                     // Registrar acesso
-                    await registerAccess(admin.id, 'admin');
+                    await registerAccess(currentUser.id, 'admin');
                     
                     // Salvar sessão
                     localStorage.setItem('lg_admin_session', JSON.stringify({
-                        id: admin.id,
-                        email: admin.email,
+                        id: currentUser.id,
+                        email: currentUser.email,
                         timestamp: new Date().getTime()
                     }));
                     
                     showAdminArea();
-                } else {
-                    showLoginMessage('Credenciais administrativas inválidas', 'danger');
+                } catch (error) {
+                    console.error('Erro no login do admin:', error);
+                    showLoginMessage('Credenciais inválidas ou erro de conexão', 'danger');
                 }
             }
             
-            function checkAutoLogin() {
+            async function checkAutoLogin() {
                 // Verificar se há sessão de cliente
                 const clientSession = localStorage.getItem('lg_client_session');
                 if (clientSession) {
-                    const session = JSON.parse(clientSession);
-                    // Verificar se a sessão expirou (24 horas)
-                    if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
-                        getClientById(session.id).then(client => {
-                            if (client && client.status === 'active') {
-                                currentClient = client;
-                                isAdmin = false;
-                                showClientArea();
-                                return;
-                            }
-                        });
+                    try {
+                        const session = JSON.parse(clientSession);
+                        // Verificar se a sessão expirou (24 horas)
+                        if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
+                            getClientById(session.id).then(client => {
+                                if (client && client.status === 'active') {
+                                    currentClient = client;
+                                    isAdmin = false;
+                                    showClientArea();
+                                    return;
+                                }
+                            }).catch(error => {
+                                console.error('Erro ao verificar sessão do cliente:', error);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Erro ao analisar sessão do cliente:', error);
                     }
                 }
                 
-                // Verificar se há sessão de admin
+                // Verificar se há sessão ativa no Supabase para admin
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        const user = session.user;
+                        currentUser = {
+                            id: user.id,
+                            email: user.email,
+                            nome: user.user_metadata?.name || 'Administrador',
+                            criadoEm: user.created_at
+                        };
+                        isAdmin = true;
+                        showAdminArea();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar sessão do Supabase:', error);
+                }
+                
+                // Verificar se há sessão local de admin (para compatibilidade)
                 const adminSession = localStorage.getItem('lg_admin_session');
                 if (adminSession) {
-                    const session = JSON.parse(adminSession);
-                    // Verificar se a sessão expirou (24 horas)
-                    if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
-                        getAdminByEmail(session.email).then(admin => {
-                            if (admin) {
-                                currentUser = admin;
-                                isAdmin = true;
-                                showAdminArea();
+                    try {
+                        const session = JSON.parse(adminSession);
+                        // Verificar se a sessão expirou (24 horas)
+                        if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
+                            // Tentar restaurar sessão do Supabase
+                            try {
+                                const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+                                if (supabaseSession && supabaseSession.user.email === session.email) {
+                                    const user = supabaseSession.user;
+                                    currentUser = {
+                                        id: user.id,
+                                        email: user.email,
+                                        nome: user.user_metadata?.name || 'Administrador',
+                                        criadoEm: user.created_at
+                                    };
+                                    isAdmin = true;
+                                    showAdminArea();
+                                }
+                            } catch (error) {
+                                console.error('Erro ao restaurar sessão do Supabase:', error);
                             }
-                        });
+                        }
+                    } catch (error) {
+                        console.error('Erro ao analisar sessão do admin:', error);
                     }
                 }
                 
@@ -1473,6 +1522,10 @@
             }
             
             function logout() {
+                // Se for admin, fazer logout no Supabase
+                if (isAdmin) {
+                    supabase.auth.signOut();
+                }
                 currentUser = null;
                 currentClient = null;
                 isAdmin = false;
@@ -1485,631 +1538,700 @@
             async function loadClientData() {
                 if (!currentClient) return;
                 
-                // Atualizar informações do cliente
-                document.getElementById('clientName').textContent = currentClient.nome;
-                document.getElementById('clientCpfDisplay').textContent = `CPF: ${formatCpf(currentClient.cpf)}`;
-                document.getElementById('clientAvatar').textContent = getInitials(currentClient.nome);
-                
-                // Carregar projeto do cliente
-                const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
-                
-                // Atualizar progresso do projeto
-                if (projeto) {
-                    document.getElementById('projectProgressBar').style.width = projeto.progresso + '%';
-                    document.getElementById('projectPercentage').textContent = projeto.progresso + '%';
+                try {
+                    // Atualizar informações do cliente
+                    document.getElementById('clientName').textContent = currentClient.nome;
+                    document.getElementById('clientCpfDisplay').textContent = `CPF: ${formatCpf(currentClient.cpf)}`;
+                    document.getElementById('clientAvatar').textContent = getInitials(currentClient.nome);
                     
-                    // Atualizar status do projeto
-                    const statusText = {
-                        'planning': 'Planejamento',
-                        'in_progress': 'Em Andamento',
-                        'review': 'Em Revisão',
-                        'completed': 'Concluído'
-                    };
+                    // Carregar projeto do cliente
+                    const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
                     
-                    document.getElementById('projectStatus').innerHTML = `
-                        <div class="alert alert-success">
-                            <i class="fas fa-project-diagram"></i>
-                            <div>
-                                <strong>${projeto.nome}</strong>
-                                <p>Status: <span class="badge badge-success">${statusText[projeto.status] || projeto.status}</span></p>
-                                ${projeto.descricao ? `<p>${projeto.descricao}</p>` : ''}
+                    // Atualizar progresso do projeto
+                    if (projeto) {
+                        document.getElementById('projectProgressBar').style.width = projeto.progresso + '%';
+                        document.getElementById('projectPercentage').textContent = projeto.progresso + '%';
+                        
+                        // Atualizar status do projeto
+                        const statusText = {
+                            'planning': 'Planejamento',
+                            'in_progress': 'Em Andamento',
+                            'review': 'Em Revisão',
+                            'completed': 'Concluído'
+                        };
+                        
+                        document.getElementById('projectStatus').innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-project-diagram"></i>
+                                <div>
+                                    <strong>${projeto.nome}</strong>
+                                    <p>Status: <span class="badge badge-success">${statusText[projeto.status] || projeto.status}</span></p>
+                                    ${projeto.descricao ? `<p>${projeto.descricao}</p>` : ''}
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    
-                    // Carregar etapas do projeto
-                    if (projeto.etapas && projeto.etapas.length > 0) {
-                        const currentStage = Math.floor(projeto.progresso / (100 / projeto.etapas.length));
-                        document.getElementById('currentStage').textContent = projeto.etapas[currentStage] || 'Início';
-                        document.getElementById('finalStage').textContent = projeto.etapas[projeto.etapas.length - 1] || 'Conclusão';
+                        `;
+                        
+                        // Carregar etapas do projeto
+                        if (projeto.etapas && projeto.etapas.length > 0) {
+                            const currentStage = Math.floor(projeto.progresso / (100 / projeto.etapas.length));
+                            document.getElementById('currentStage').textContent = projeto.etapas[currentStage] || 'Início';
+                            document.getElementById('finalStage').textContent = projeto.etapas[projeto.etapas.length - 1] || 'Conclusão';
+                        }
                     }
+                    
+                    // Carregar alertas
+                    await loadClientAlerts();
+                    
+                    // Carregar prazos
+                    await loadClientDeadlines();
+                    
+                    // Carregar orientações
+                    await loadClientOrientations();
+                    
+                    // Carregar links
+                    await loadClientLinks();
+                    
+                    // Carregar arquivos
+                    await loadClientFiles();
+                    
+                    // Carregar linha do tempo
+                    await loadClientTimeline();
+                } catch (error) {
+                    console.error('Erro ao carregar dados do cliente:', error);
+                    showMessage('Erro ao carregar dados. Por favor, recarregue a página.', 'danger');
                 }
-                
-                // Carregar alertas
-                await loadClientAlerts();
-                
-                // Carregar prazos
-                await loadClientDeadlines();
-                
-                // Carregar orientações
-                await loadClientOrientations();
-                
-                // Carregar links
-                await loadClientLinks();
-                
-                // Carregar arquivos
-                await loadClientFiles();
-                
-                // Carregar linha do tempo
-                await loadClientTimeline();
             }
             
             async function loadAdminData() {
-                // Carregar estatísticas
-                const clientes = await getAllClients();
-                const projetos = await getAllProjects();
-                const prazos = await getAllDeadlines();
-                
-                // Atualizar contadores
-                const activeClients = clientes.filter(c => c.status === 'active').length;
-                const activeProjects = projetos.filter(p => p.status !== 'completed').length;
-                
-                const today = new Date().toISOString().split('T')[0];
-                const todayDeadlines = prazos.filter(p => p.data === today && p.status !== 'concluido').length;
-                
-                document.getElementById('activeClientsCount').textContent = activeClients;
-                document.getElementById('activeProjectsCount').textContent = activeProjects;
-                document.getElementById('todayDeadlinesCount').textContent = todayDeadlines;
-                
-                // Carregar tabela de clientes
-                await loadClientsTable();
-                
-                // Carregar tabela de projetos
-                await loadProjectsTable();
-                
-                // Carregar alertas do admin
-                await loadAdminAlerts();
-                
-                // Carregar links do admin
-                await loadAdminLinks();
-                
-                // Carregar orientações do admin
-                await loadAdminOrientations();
+                try {
+                    // Carregar estatísticas
+                    const clientes = await getAllClients();
+                    const projetos = await getAllProjects();
+                    const prazos = await getAllDeadlines();
+                    
+                    // Atualizar contadores
+                    const activeClients = clientes.filter(c => c.status === 'active').length;
+                    const activeProjects = projetos.filter(p => p.status !== 'completed').length;
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    const todayDeadlines = prazos.filter(p => p.data === today && p.status !== 'concluido').length;
+                    
+                    document.getElementById('activeClientsCount').textContent = activeClients;
+                    document.getElementById('activeProjectsCount').textContent = activeProjects;
+                    document.getElementById('todayDeadlinesCount').textContent = todayDeadlines;
+                    
+                    // Carregar tabela de clientes
+                    await loadClientsTable();
+                    
+                    // Carregar tabela de projetos
+                    await loadProjectsTable();
+                    
+                    // Carregar alertas do admin
+                    await loadAdminAlerts();
+                    
+                    // Carregar links do admin
+                    await loadAdminLinks();
+                    
+                    // Carregar orientações do admin
+                    await loadAdminOrientations();
+                } catch (error) {
+                    console.error('Erro ao carregar dados do admin:', error);
+                    showMessage('Erro ao carregar dados administrativos.', 'danger');
+                }
             }
             
             // Funções para carregar dados específicos
             async function loadClientAlerts() {
-                const alerts = await getAlertsByClientId(currentClient.id);
-                const container = document.getElementById('alertsContainer');
-                
-                if (alerts.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta no momento.</div>';
-                    return;
-                }
-                
-                container.innerHTML = alerts.map(alert => `
-                    <div class="alert ${getAlertClass(alert.tipo)}">
-                        <i class="${alert.icone || getAlertIcon(alert.tipo)}"></i>
-                        <div>
-                            <strong>${alert.titulo}</strong>
-                            <p>${alert.descricao}</p>
-                            <small>${formatDate(alert.data)}</small>
+                try {
+                    const alerts = await getAlertsByClientId(currentClient.id);
+                    const container = document.getElementById('alertsContainer');
+                    
+                    if (alerts.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta no momento.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = alerts.map(alert => `
+                        <div class="alert ${getAlertClass(alert.tipo)}">
+                            <i class="${alert.icone || getAlertIcon(alert.tipo)}"></i>
+                            <div>
+                                <strong>${alert.titulo}</strong>
+                                <p>${alert.descricao}</p>
+                                <small>${formatDate(alert.data)}</small>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar alertas:', error);
+                }
             }
             
             async function loadClientDeadlines() {
-                const deadlines = await getDeadlinesByClientId(currentClient.id);
-                const container = document.getElementById('deadlinesContainer');
-                
-                if (deadlines.length === 0) {
-                    container.innerHTML = '<p>Nenhum prazo definido.</p>';
-                    return;
-                }
-                
-                container.innerHTML = deadlines.map(deadline => {
-                    const today = new Date();
-                    const deadlineDate = new Date(deadline.data);
-                    const diffTime = deadlineDate.getTime() - today.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                try {
+                    const deadlines = await getDeadlinesByClientId(currentClient.id);
+                    const container = document.getElementById('deadlinesContainer');
                     
-                    let statusClass = 'badge-info';
-                    let statusText = 'Futuro';
-                    
-                    if (deadline.status === 'concluido') {
-                        statusClass = 'badge-success';
-                        statusText = 'Concluído';
-                    } else if (diffDays < 0) {
-                        statusClass = 'badge-danger';
-                        statusText = 'Atrasado';
-                    } else if (diffDays <= 3) {
-                        statusClass = 'badge-warning';
-                        statusText = 'Próximo';
+                    if (deadlines.length === 0) {
+                        container.innerHTML = '<p>Nenhum prazo definido.</p>';
+                        return;
                     }
                     
-                    return `
-                        <div class="list-item">
-                            <div class="list-icon">
-                                <i class="fas fa-calendar-day"></i>
-                            </div>
-                            <div style="flex: 1;">
-                                <strong>${deadline.titulo}</strong>
-                                <p>${deadline.descricao || ''}</p>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <small>${formatDate(deadline.data)}</small>
-                                    <span class="badge ${statusClass}">${statusText}</span>
+                    container.innerHTML = deadlines.map(deadline => {
+                        const today = new Date();
+                        const deadlineDate = new Date(deadline.data);
+                        const diffTime = deadlineDate.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        let statusClass = 'badge-info';
+                        let statusText = 'Futuro';
+                        
+                        if (deadline.status === 'concluido') {
+                            statusClass = 'badge-success';
+                            statusText = 'Concluído';
+                        } else if (diffDays < 0) {
+                            statusClass = 'badge-danger';
+                            statusText = 'Atrasado';
+                        } else if (diffDays <= 3) {
+                            statusClass = 'badge-warning';
+                            statusText = 'Próximo';
+                        }
+                        
+                        return `
+                            <div class="list-item">
+                                <div class="list-icon">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <strong>${deadline.titulo}</strong>
+                                    <p>${deadline.descricao || ''}</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <small>${formatDate(deadline.data)}</small>
+                                        <span class="badge ${statusClass}">${statusText}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar prazos:', error);
+                }
             }
             
             async function loadClientOrientations() {
-                const orientations = await getOrientationsByClientId(currentClient.id);
-                const container = document.getElementById('orientationsContainer');
-                
-                if (orientations.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhuma orientação disponível.</div>';
-                    return;
+                try {
+                    const orientations = await getOrientationsByClientId(currentClient.id);
+                    const container = document.getElementById('orientationsContainer');
+                    
+                    if (orientations.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhuma orientação disponível.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = orientations.map(orientation => `
+                        <div class="glass-card mb-20">
+                            <h3><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h3>
+                            <p>${orientation.descricao}</p>
+                            ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
+                            <small style="display: block; margin-top: 10px; color: var(--gray);">Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar orientações:', error);
                 }
-                
-                container.innerHTML = orientations.map(orientation => `
-                    <div class="glass-card mb-20">
-                        <h3><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h3>
-                        <p>${orientation.descricao}</p>
-                        ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
-                        <small style="display: block; margin-top: 10px; color: var(--gray);">Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
-                    </div>
-                `).join('');
             }
             
             async function loadClientLinks() {
-                const links = await getLinksByClientId(currentClient.id);
-                const container = document.getElementById('linksContainer');
-                
-                if (links.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum link disponível.</div>';
-                    return;
+                try {
+                    const links = await getLinksByClientId(currentClient.id);
+                    const container = document.getElementById('linksContainer');
+                    
+                    if (links.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum link disponível.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = links.map(link => `
+                        <a href="${link.url}" target="_blank" class="link-card">
+                            <div class="link-icon">
+                                <i class="${link.icone || 'fas fa-link'}"></i>
+                            </div>
+                            <div class="link-info">
+                                <h3>${link.titulo}</h3>
+                                <p>${link.descricao || ''}</p>
+                            </div>
+                        </a>
+                    `).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar links:', error);
                 }
-                
-                container.innerHTML = links.map(link => `
-                    <a href="${link.url}" target="_blank" class="link-card">
-                        <div class="link-icon">
-                            <i class="${link.icone || 'fas fa-link'}"></i>
-                        </div>
-                        <div class="link-info">
-                            <h3>${link.titulo}</h3>
-                            <p>${link.descricao || ''}</p>
-                        </div>
-                    </a>
-                `).join('');
             }
             
             async function loadClientFiles() {
-                const files = await getFilesByClientId(currentClient.id);
-                const container = document.getElementById('filesContainer');
-                
-                if (files.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum arquivo disponível para download.</div>';
-                    return;
+                try {
+                    const files = await getFilesByClientId(currentClient.id);
+                    const container = document.getElementById('filesContainer');
+                    
+                    if (files.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum arquivo disponível para download.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = files.map(file => `
+                        <div class="list-item">
+                            <div class="list-icon">
+                                <i class="fas fa-file-${getFileIcon(file.tipo)}"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <strong>${file.nome}</strong>
+                                <p>${file.descricao || ''}</p>
+                                <small>Tamanho: ${formatFileSize(file.tamanho)} • Tipo: ${file.tipo}</small>
+                            </div>
+                            <button class="btn btn-outline" onclick="downloadFile('${file.url}', '${file.nome}')">
+                                <i class="fas fa-download"></i> Baixar
+                            </button>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar arquivos:', error);
                 }
-                
-                container.innerHTML = files.map(file => `
-                    <div class="list-item">
-                        <div class="list-icon">
-                            <i class="fas fa-file-${getFileIcon(file.tipo)}"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <strong>${file.nome}</strong>
-                            <p>${file.descricao || ''}</p>
-                            <small>Tamanho: ${formatFileSize(file.tamanho)} • Tipo: ${file.tipo}</small>
-                        </div>
-                        <button class="btn btn-outline" onclick="downloadFile('${file.url}', '${file.nome}')">
-                            <i class="fas fa-download"></i> Baixar
-                        </button>
-                    </div>
-                `).join('');
             }
             
             async function loadClientTimeline() {
-                const container = document.getElementById('timelineContainer');
-                
-                // Combinar eventos de diferentes fontes
-                const alerts = await getAlertsByClientId(currentClient.id);
-                const deadlines = await getDeadlinesByClientId(currentClient.id);
-                const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
-                
-                const timelineEvents = [];
-                
-                // Adicionar alertas
-                alerts.forEach(alert => {
-                    timelineEvents.push({
-                        type: 'alert',
-                        date: alert.data,
-                        title: alert.titulo,
-                        description: alert.descricao,
-                        icon: alert.icone || getAlertIcon(alert.tipo)
-                    });
-                });
-                
-                // Adicionar prazos
-                deadlines.forEach(deadline => {
-                    timelineEvents.push({
-                        type: 'deadline',
-                        date: deadline.data,
-                        title: deadline.titulo,
-                        description: deadline.descricao,
-                        icon: 'fas fa-calendar-day'
-                    });
-                });
-                
-                // Adicionar etapas do projeto
-                if (projeto && projeto.etapas) {
-                    projeto.etapas.forEach((etapa, index) => {
+                try {
+                    const container = document.getElementById('timelineContainer');
+                    
+                    // Combinar eventos de diferentes fontes
+                    const alerts = await getAlertsByClientId(currentClient.id);
+                    const deadlines = await getDeadlinesByClientId(currentClient.id);
+                    const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
+                    
+                    const timelineEvents = [];
+                    
+                    // Adicionar alertas
+                    alerts.forEach(alert => {
                         timelineEvents.push({
-                            type: 'stage',
-                            date: projeto.dataInicio, // Ajustar conforme necessário
-                            title: `Etapa ${index + 1}: ${etapa}`,
-                            description: `Progresso do projeto: ${projeto.nome}`,
-                            icon: 'fas fa-flag-checkered'
+                            type: 'alert',
+                            date: alert.data,
+                            title: alert.titulo,
+                            description: alert.descricao,
+                            icon: alert.icone || getAlertIcon(alert.tipo)
                         });
                     });
-                }
-                
-                // Ordenar por data
-                timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
-                
-                if (timelineEvents.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum evento na linha do tempo.</div>';
-                    return;
-                }
-                
-                container.innerHTML = timelineEvents.map(event => `
-                    <div class="list-item">
-                        <div class="list-icon" style="background: ${getEventColor(event.type)};">
-                            <i class="${event.icon}"></i>
+                    
+                    // Adicionar prazos
+                    deadlines.forEach(deadline => {
+                        timelineEvents.push({
+                            type: 'deadline',
+                            date: deadline.data,
+                            title: deadline.titulo,
+                            description: deadline.descricao,
+                            icon: 'fas fa-calendar-day'
+                        });
+                    });
+                    
+                    // Adicionar etapas do projeto
+                    if (projeto && projeto.etapas) {
+                        projeto.etapas.forEach((etapa, index) => {
+                            timelineEvents.push({
+                                type: 'stage',
+                                date: projeto.dataInicio,
+                                title: `Etapa ${index + 1}: ${etapa}`,
+                                description: `Progresso do projeto: ${projeto.nome}`,
+                                icon: 'fas fa-flag-checkered'
+                            });
+                        });
+                    }
+                    
+                    // Ordenar por data
+                    timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    if (timelineEvents.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum evento na linha do tempo.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = timelineEvents.map(event => `
+                        <div class="list-item">
+                            <div class="list-icon" style="background: ${getEventColor(event.type)};">
+                                <i class="${event.icon}"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <strong>${event.title}</strong>
+                                <p>${event.description || ''}</p>
+                                <small>${formatDate(event.date)} • ${getEventTypeName(event.type)}</small>
+                            </div>
                         </div>
-                        <div style="flex: 1;">
-                            <strong>${event.title}</strong>
-                            <p>${event.description || ''}</p>
-                            <small>${formatDate(event.date)} • ${getEventTypeName(event.type)}</small>
-                        </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar timeline:', error);
+                }
             }
             
             async function loadClientsTable() {
-                const clients = await getAllClients();
-                const projetos = await getAllProjects();
-                const container = document.getElementById('clientsTableBody');
-                
-                container.innerHTML = clients.map(client => {
-                    const projeto = projetos.find(p => p.id === client.projetoId);
-                    const lastAccess = client.ultimoAcesso ? formatDate(client.ultimoAcesso) : 'Nunca acessou';
+                try {
+                    const clients = await getAllClients();
+                    const projetos = await getAllProjects();
+                    const container = document.getElementById('clientsTableBody');
                     
-                    return `
-                        <tr>
-                            <td>${client.nome}</td>
-                            <td>${formatCpf(client.cpf)}</td>
-                            <td>
-                                <span class="status-indicator">
-                                    <span class="status-dot ${client.status}"></span>
-                                    ${client.status === 'active' ? 'Ativo' : 'Inativo'}
-                                </span>
-                            </td>
-                            <td>${projeto ? projeto.nome : 'Nenhum'}</td>
-                            <td>${lastAccess}</td>
-                            <td>
-                                <button class="btn btn-outline" onclick="editClient(${client.id})" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-outline" onclick="toggleClientStatus(${client.id}, '${client.status}')" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-${client.status === 'active' ? 'ban' : 'check'}"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                    container.innerHTML = clients.map(client => {
+                        const projeto = projetos.find(p => p.id === client.projetoId);
+                        const lastAccess = client.ultimoAcesso ? formatDate(client.ultimoAcesso) : 'Nunca acessou';
+                        
+                        return `
+                            <tr>
+                                <td>${client.nome}</td>
+                                <td>${formatCpf(client.cpf)}</td>
+                                <td>
+                                    <span class="status-indicator">
+                                        <span class="status-dot ${client.status}"></span>
+                                        ${client.status === 'active' ? 'Ativo' : 'Inativo'}
+                                    </span>
+                                </td>
+                                <td>${projeto ? projeto.nome : 'Nenhum'}</td>
+                                <td>${lastAccess}</td>
+                                <td>
+                                    <button class="btn btn-outline" onclick="editClient(${client.id})" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline" onclick="toggleClientStatus(${client.id}, '${client.status}')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-${client.status === 'active' ? 'ban' : 'check'}"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar tabela de clientes:', error);
+                }
             }
             
             async function loadProjectsTable() {
-                const projects = await getAllProjects();
-                const clients = await getAllClients();
-                const container = document.getElementById('projectsTableBody');
-                
-                container.innerHTML = projects.map(project => {
-                    const client = clients.find(c => c.id === project.clienteId);
-                    const statusText = {
-                        'planning': 'Planejamento',
-                        'in_progress': 'Em Andamento',
-                        'review': 'Em Revisão',
-                        'completed': 'Concluído'
-                    };
+                try {
+                    const projects = await getAllProjects();
+                    const clients = await getAllClients();
+                    const container = document.getElementById('projectsTableBody');
                     
-                    return `
-                        <tr>
-                            <td>${project.nome}</td>
-                            <td>${client ? client.nome : 'Cliente não encontrado'}</td>
-                            <td>
-                                <div class="progress-bar" style="height: 6px; margin-bottom: 5px;">
-                                    <div class="progress-fill" style="width: ${project.progresso}%"></div>
-                                </div>
-                                <small>${project.progresso}%</small>
-                            </td>
-                            <td>
-                                <span class="badge ${getProjectStatusBadge(project.status)}">
-                                    ${statusText[project.status] || project.status}
-                                </span>
-                            </td>
-                            <td>${project.prazoFinal ? formatDate(project.prazoFinal) : 'Não definido'}</td>
-                            <td>
-                                <button class="btn btn-outline" onclick="editProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-outline" onclick="deleteProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                    container.innerHTML = projects.map(project => {
+                        const client = clients.find(c => c.id === project.clienteId);
+                        const statusText = {
+                            'planning': 'Planejamento',
+                            'in_progress': 'Em Andamento',
+                            'review': 'Em Revisão',
+                            'completed': 'Concluído'
+                        };
+                        
+                        return `
+                            <tr>
+                                <td>${project.nome}</td>
+                                <td>${client ? client.nome : 'Cliente não encontrado'}</td>
+                                <td>
+                                    <div class="progress-bar" style="height: 6px; margin-bottom: 5px;">
+                                        <div class="progress-fill" style="width: ${project.progresso}%"></div>
+                                    </div>
+                                    <small>${project.progresso}%</small>
+                                </td>
+                                <td>
+                                    <span class="badge ${getProjectStatusBadge(project.status)}">
+                                        ${statusText[project.status] || project.status}
+                                    </span>
+                                </td>
+                                <td>${project.prazoFinal ? formatDate(project.prazoFinal) : 'Não definido'}</td>
+                                <td>
+                                    <button class="btn btn-outline" onclick="editProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline" onclick="deleteProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar tabela de projetos:', error);
+                }
             }
             
             async function loadAdminAlerts() {
-                const alerts = await getAllAlerts();
-                const container = document.getElementById('adminAlertsContainer');
-                
-                if (alerts.length === 0) {
-                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta criado.</div>';
-                    return;
-                }
-                
-                container.innerHTML = alerts.map(alert => {
-                    const client = alert.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                try {
+                    const alerts = await getAllAlerts();
+                    const container = document.getElementById('adminAlertsContainer');
                     
-                    return `
-                        <div class="glass-card mb-20">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
-                                    <h4><i class="${alert.icone || getAlertIcon(alert.tipo)}"></i> ${alert.titulo}</h4>
-                                    <p>${alert.descricao}</p>
-                                    <small>Para: ${client} • Criado em: ${formatDate(alert.criadoEm)}</small>
-                                </div>
-                                <div>
-                                    <button class="btn btn-outline" onclick="editContent(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline" onclick="toggleContentStatus(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
-                                        <i class="fas fa-${alert.status === 'active' ? 'ban' : 'check'}"></i>
-                                    </button>
+                    if (alerts.length === 0) {
+                        container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta criado.</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = alerts.map(alert => {
+                        const client = alert.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                        
+                        return `
+                            <div class="glass-card mb-20">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <h4><i class="${alert.icone || getAlertIcon(alert.tipo)}"></i> ${alert.titulo}</h4>
+                                        <p>${alert.descricao}</p>
+                                        <small>Para: ${client} • Criado em: ${formatDate(alert.criadoEm)}</small>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-outline" onclick="editContent(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline" onclick="toggleContentStatus(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
+                                            <i class="fas fa-${alert.status === 'active' ? 'ban' : 'check'}"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar alertas do admin:', error);
+                }
             }
             
             async function loadAdminLinks() {
-                const links = await getAllLinks();
-                const container = document.getElementById('adminLinksContainer');
-                
-                if (links.length === 0) {
-                    container.innerHTML = '<p>Nenhum link criado.</p>';
-                    return;
-                }
-                
-                container.innerHTML = links.map(link => {
-                    const client = link.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                try {
+                    const links = await getAllLinks();
+                    const container = document.getElementById('adminLinksContainer');
                     
-                    return `
-                        <div class="list-item">
-                            <div class="list-icon">
-                                <i class="${link.icone || 'fas fa-link'}"></i>
-                            </div>
-                            <div style="flex: 1;">
-                                <strong>${link.titulo}</strong>
-                                <p>${link.descricao || ''}</p>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <small>${client} • URL: ${link.url.substring(0, 50)}...</small>
-                                    <span class="badge ${link.status === 'active' ? 'badge-success' : 'badge-danger'}">
-                                        ${link.status === 'active' ? 'Ativo' : 'Inativo'}
-                                    </span>
+                    if (links.length === 0) {
+                        container.innerHTML = '<p>Nenhum link criado.</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = links.map(link => {
+                        const client = link.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                        
+                        return `
+                            <div class="list-item">
+                                <div class="list-icon">
+                                    <i class="${link.icone || 'fas fa-link'}"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <strong>${link.titulo}</strong>
+                                    <p>${link.descricao || ''}</p>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <small>${client} • URL: ${link.url.substring(0, 50)}...</small>
+                                        <span class="badge ${link.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                                            ${link.status === 'active' ? 'Ativo' : 'Inativo'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline" onclick="editContent(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline" onclick="toggleContentStatus(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-${link.status === 'active' ? 'ban' : 'check'}"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div>
-                                <button class="btn btn-outline" onclick="editContent(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-outline" onclick="toggleContentStatus(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
-                                    <i class="fas fa-${link.status === 'active' ? 'ban' : 'check'}"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar links do admin:', error);
+                }
             }
             
             async function loadAdminOrientations() {
-                const orientations = await getAllOrientations();
-                const container = document.getElementById('adminOrientationsContainer');
-                
-                if (orientations.length === 0) {
-                    container.innerHTML = '<p>Nenhuma orientação criada.</p>';
-                    return;
-                }
-                
-                container.innerHTML = orientations.map(orientation => {
-                    const client = orientation.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                try {
+                    const orientations = await getAllOrientations();
+                    const container = document.getElementById('adminOrientationsContainer');
                     
-                    return `
-                        <div class="glass-card mb-20">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
-                                    <h4><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h4>
-                                    <p>${orientation.descricao}</p>
-                                    ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
-                                    <small>Para: ${client} • Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
-                                </div>
-                                <div>
-                                    <button class="btn btn-outline" onclick="editContent(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline" onclick="toggleContentStatus(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
-                                        <i class="fas fa-${orientation.status === 'active' ? 'ban' : 'check'}"></i>
-                                    </button>
+                    if (orientations.length === 0) {
+                        container.innerHTML = '<p>Nenhuma orientação criada.</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = orientations.map(orientation => {
+                        const client = orientation.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                        
+                        return `
+                            <div class="glass-card mb-20">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <h4><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h4>
+                                        <p>${orientation.descricao}</p>
+                                        ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
+                                        <small>Para: ${client} • Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-outline" onclick="editContent(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline" onclick="toggleContentStatus(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
+                                            <i class="fas fa-${orientation.status === 'active' ? 'ban' : 'check'}"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                } catch (error) {
+                    console.error('Erro ao carregar orientações do admin:', error);
+                }
             }
             
             // Funções dos modais
             async function openClientModal(clientId = null) {
-                const modal = document.getElementById('clientModal');
-                const title = document.getElementById('clientModalTitle');
-                const form = document.getElementById('clientForm');
-                
-                // Limpar formulário
-                form.reset();
-                
-                // Carregar projetos para o select
-                const projects = await getAllProjects();
-                const projectSelect = document.getElementById('modalClientProject');
-                projectSelect.innerHTML = '<option value="">Nenhum</option>' + 
-                    projects.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-                
-                if (clientId) {
-                    // Modo edição
-                    title.textContent = 'Editar Cliente';
-                    const client = await getClientById(clientId);
+                try {
+                    const modal = document.getElementById('clientModal');
+                    const title = document.getElementById('clientModalTitle');
+                    const form = document.getElementById('clientForm');
                     
-                    if (client) {
-                        document.getElementById('modalClientId').value = client.id;
-                        document.getElementById('modalClientName').value = client.nome;
-                        document.getElementById('modalClientCpf').value = client.cpf;
-                        document.getElementById('modalClientEmail').value = client.email;
-                        document.getElementById('modalClientPassword').value = client.senha;
-                        document.getElementById('modalClientStatus').value = client.status;
-                        document.getElementById('modalClientProject').value = client.projetoId || '';
+                    // Limpar formulário
+                    form.reset();
+                    
+                    // Carregar projetos para o select
+                    const projects = await getAllProjects();
+                    const projectSelect = document.getElementById('modalClientProject');
+                    projectSelect.innerHTML = '<option value="">Nenhum</option>' + 
+                        projects.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                    
+                    if (clientId) {
+                        // Modo edição
+                        title.textContent = 'Editar Cliente';
+                        const client = await getClientById(clientId);
+                        
+                        if (client) {
+                            document.getElementById('modalClientId').value = client.id;
+                            document.getElementById('modalClientName').value = client.nome;
+                            document.getElementById('modalClientCpf').value = client.cpf;
+                            document.getElementById('modalClientEmail').value = client.email;
+                            document.getElementById('modalClientPassword').value = client.senha;
+                            document.getElementById('modalClientStatus').value = client.status;
+                            document.getElementById('modalClientProject').value = client.projetoId || '';
+                        }
+                    } else {
+                        // Modo adição
+                        title.textContent = 'Adicionar Cliente';
+                        document.getElementById('modalClientId').value = '';
+                        document.getElementById('modalClientPassword').value = generatePassword();
                     }
-                } else {
-                    // Modo adição
-                    title.textContent = 'Adicionar Cliente';
-                    document.getElementById('modalClientId').value = '';
-                    document.getElementById('modalClientPassword').value = generatePassword();
+                    
+                    modal.classList.add('active');
+                } catch (error) {
+                    console.error('Erro ao abrir modal de cliente:', error);
+                    showMessage('Erro ao abrir formulário de cliente.', 'danger');
                 }
-                
-                modal.classList.add('active');
             }
             
             async function openProjectModal(projectId = null) {
-                const modal = document.getElementById('projectModal');
-                const title = document.getElementById('projectModalTitle');
-                const form = document.getElementById('projectForm');
-                
-                // Limpar formulário
-                form.reset();
-                
-                // Carregar clientes para o select
-                const clients = await getAllClients();
-                const clientSelect = document.getElementById('modalProjectClient');
-                clientSelect.innerHTML = '<option value="">Selecione um cliente</option>' + 
-                    clients.map(c => `<option value="${c.id}">${c.nome} (${formatCpf(c.cpf)})</option>`).join('');
-                
-                if (projectId) {
-                    // Modo edição
-                    title.textContent = 'Editar Projeto';
-                    const project = await getProjectById(projectId);
+                try {
+                    const modal = document.getElementById('projectModal');
+                    const title = document.getElementById('projectModalTitle');
+                    const form = document.getElementById('projectForm');
                     
-                    if (project) {
-                        document.getElementById('modalProjectId').value = project.id;
-                        document.getElementById('modalProjectName').value = project.nome;
-                        document.getElementById('modalProjectClient').value = project.clienteId;
-                        document.getElementById('modalProjectDescription').value = project.descricao || '';
-                        document.getElementById('modalProjectProgress').value = project.progresso;
-                        document.getElementById('modalProjectProgressValue').textContent = project.progresso + '%';
-                        document.getElementById('modalProjectStatus').value = project.status;
-                        document.getElementById('modalProjectDeadline').value = project.prazoFinal || '';
-                        document.getElementById('modalProjectStages').value = project.etapas ? project.etapas.join('\n') : '';
+                    // Limpar formulário
+                    form.reset();
+                    
+                    // Carregar clientes para o select
+                    const clients = await getAllClients();
+                    const clientSelect = document.getElementById('modalProjectClient');
+                    clientSelect.innerHTML = '<option value="">Selecione um cliente</option>' + 
+                        clients.map(c => `<option value="${c.id}">${c.nome} (${formatCpf(c.cpf)})</option>`).join('');
+                    
+                    if (projectId) {
+                        // Modo edição
+                        title.textContent = 'Editar Projeto';
+                        const project = await getProjectById(projectId);
+                        
+                        if (project) {
+                            document.getElementById('modalProjectId').value = project.id;
+                            document.getElementById('modalProjectName').value = project.nome;
+                            document.getElementById('modalProjectClient').value = project.clienteId;
+                            document.getElementById('modalProjectDescription').value = project.descricao || '';
+                            document.getElementById('modalProjectProgress').value = project.progresso;
+                            document.getElementById('modalProjectProgressValue').textContent = project.progresso + '%';
+                            document.getElementById('modalProjectStatus').value = project.status;
+                            document.getElementById('modalProjectDeadline').value = project.prazoFinal || '';
+                            document.getElementById('modalProjectStages').value = project.etapas ? project.etapas.join('\n') : '';
+                        }
+                    } else {
+                        // Modo adição
+                        title.textContent = 'Adicionar Projeto';
+                        document.getElementById('modalProjectId').value = '';
+                        document.getElementById('modalProjectProgressValue').textContent = '0%';
                     }
-                } else {
-                    // Modo adição
-                    title.textContent = 'Adicionar Projeto';
-                    document.getElementById('modalProjectId').value = '';
-                    document.getElementById('modalProjectProgressValue').textContent = '0%';
+                    
+                    modal.classList.add('active');
+                } catch (error) {
+                    console.error('Erro ao abrir modal de projeto:', error);
+                    showMessage('Erro ao abrir formulário de projeto.', 'danger');
                 }
-                
-                modal.classList.add('active');
             }
             
             async function openContentModal(contentType = 'link', contentId = null) {
-                const modal = document.getElementById('contentModal');
-                const title = document.getElementById('contentModalTitle');
-                const form = document.getElementById('contentForm');
-                const typeSelect = document.getElementById('modalContentType');
-                
-                // Limpar formulário
-                form.reset();
-                
-                // Definir tipo de conteúdo
-                typeSelect.value = contentType;
-                updateContentModalFields();
-                
-                // Carregar clientes para o select
-                const clients = await getAllClients();
-                const clientSelect = document.getElementById('modalContentClient');
-                clientSelect.innerHTML = '<option value="">Todos os Clientes</option>' + 
-                    clients.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-                
-                if (contentId) {
-                    // Modo edição
-                    title.textContent = 'Editar Conteúdo';
+                try {
+                    const modal = document.getElementById('contentModal');
+                    const title = document.getElementById('contentModalTitle');
+                    const form = document.getElementById('contentForm');
+                    const typeSelect = document.getElementById('modalContentType');
                     
-                    let content;
-                    switch(contentType) {
-                        case 'link':
-                            content = await getLinkById(contentId);
-                            break;
-                        case 'orientation':
-                            content = await getOrientationById(contentId);
-                            break;
-                        case 'alert':
-                            content = await getAlertById(contentId);
-                            break;
-                        case 'file':
-                            content = await getFileById(contentId);
-                            break;
+                    // Limpar formulário
+                    form.reset();
+                    
+                    // Definir tipo de conteúdo
+                    typeSelect.value = contentType;
+                    updateContentModalFields();
+                    
+                    // Carregar clientes para o select
+                    const clients = await getAllClients();
+                    const clientSelect = document.getElementById('modalContentClient');
+                    clientSelect.innerHTML = '<option value="">Todos os Clientes</option>' + 
+                        clients.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                    
+                    if (contentId) {
+                        // Modo edição
+                        title.textContent = 'Editar Conteúdo';
+                        
+                        let content;
+                        switch(contentType) {
+                            case 'link':
+                                content = await getLinkById(contentId);
+                                break;
+                            case 'orientation':
+                                content = await getOrientationById(contentId);
+                                break;
+                            case 'alert':
+                                content = await getAlertById(contentId);
+                                break;
+                            case 'file':
+                                content = await getFileById(contentId);
+                                break;
+                        }
+                        
+                        if (content) {
+                            document.getElementById('modalContentId').value = content.id;
+                            document.getElementById('modalContentTitle').value = content.titulo;
+                            document.getElementById('modalContentDescription').value = content.descricao || '';
+                            document.getElementById('modalContentUrl').value = content.url || '';
+                            document.getElementById('modalContentIcon').value = content.icone || '';
+                            document.getElementById('modalContentClient').value = content.clienteId || '';
+                            document.getElementById('modalContentStatus').value = content.status || 'active';
+                        }
+                    } else {
+                        // Modo adição
+                        title.textContent = 'Adicionar Conteúdo';
+                        document.getElementById('modalContentId').value = '';
+                        
+                        // Definir ícone padrão baseado no tipo
+                        const defaultIcons = {
+                            'link': 'fas fa-link',
+                            'orientation': 'fas fa-info-circle',
+                            'alert': 'fas fa-bell',
+                            'file': 'fas fa-file'
+                        };
+                        
+                        document.getElementById('modalContentIcon').value = defaultIcons[contentType] || 'fas fa-question-circle';
                     }
                     
-                    if (content) {
-                        document.getElementById('modalContentId').value = content.id;
-                        document.getElementById('modalContentTitle').value = content.titulo;
-                        document.getElementById('modalContentDescription').value = content.descricao || '';
-                        document.getElementById('modalContentUrl').value = content.url || '';
-                        document.getElementById('modalContentIcon').value = content.icone || '';
-                        document.getElementById('modalContentClient').value = content.clienteId || '';
-                        document.getElementById('modalContentStatus').value = content.status || 'active';
-                    }
-                } else {
-                    // Modo adição
-                    title.textContent = 'Adicionar Conteúdo';
-                    document.getElementById('modalContentId').value = '';
-                    
-                    // Definir ícone padrão baseado no tipo
-                    const defaultIcons = {
-                        'link': 'fas fa-link',
-                        'orientation': 'fas fa-info-circle',
-                        'alert': 'fas fa-bell',
-                        'file': 'fas fa-file'
-                    };
-                    
-                    document.getElementById('modalContentIcon').value = defaultIcons[contentType] || 'fas fa-question-circle';
+                    modal.classList.add('active');
+                } catch (error) {
+                    console.error('Erro ao abrir modal de conteúdo:', error);
+                    showMessage('Erro ao abrir formulário de conteúdo.', 'danger');
                 }
-                
-                modal.classList.add('active');
             }
             
             function updateContentModalFields() {
@@ -2247,14 +2369,14 @@
                 }
                 
                 if (type === 'alert') {
-                    contentData.tipo = 'info'; // Tipo padrão
+                    contentData.tipo = 'info';
                     contentData.data = new Date().toISOString();
                 }
                 
                 if (type === 'file') {
                     contentData.nome = contentData.titulo;
-                    contentData.tipo = 'pdf'; // Tipo padrão
-                    contentData.tamanho = 0; // Tamanho padrão
+                    contentData.tipo = 'pdf';
+                    contentData.tamanho = 0;
                 }
                 
                 try {
@@ -2354,7 +2476,6 @@
             }
             
             function showMessage(message, type) {
-                // Criar um elemento de mensagem temporário
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `glass-card alert-${type}`;
                 messageDiv.style.position = 'fixed';
@@ -2367,7 +2488,6 @@
                 
                 document.body.appendChild(messageDiv);
                 
-                // Remover após 5 segundos
                 setTimeout(() => {
                     messageDiv.remove();
                 }, 5000);
@@ -2473,426 +2593,553 @@
                 return Math.random().toString(36).slice(-8);
             }
             
-            // Funções do IndexedDB
+            // Funções do IndexedDB portallegacy
             // Admin
             async function addAdmin(admin) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ADMIN], 'readwrite');
-                    const store = transaction.objectStore(STORES.ADMIN);
-                    const request = store.add(admin);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ADMIN], 'readwrite');
+                        const store = transaction.objectStore(STORES.ADMIN);
+                        const request = store.add(admin);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAdminByEmail(email) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ADMIN], 'readonly');
-                    const store = transaction.objectStore(STORES.ADMIN);
-                    const index = store.index('email');
-                    const request = index.get(email);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ADMIN], 'readonly');
+                        const store = transaction.objectStore(STORES.ADMIN);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const admins = request.result;
+                            const admin = admins.find(a => a.email === email);
+                            resolve(admin);
+                        };
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Clientes
             async function addClient(client) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.CLIENTES], 'readwrite');
-                    const store = transaction.objectStore(STORES.CLIENTES);
-                    const request = store.add(client);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.CLIENTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.CLIENTS);
+                        const request = store.add(client);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateClient(client) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.CLIENTES], 'readwrite');
-                    const store = transaction.objectStore(STORES.CLIENTES);
-                    const request = store.put(client);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.CLIENTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.CLIENTS);
+                        const request = store.put(client);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getClientById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
-                    const store = transaction.objectStore(STORES.CLIENTES);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.CLIENTS], 'readonly');
+                        const store = transaction.objectStore(STORES.CLIENTS);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getClientByCpf(cpf) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
-                    const store = transaction.objectStore(STORES.CLIENTES);
-                    const index = store.index('cpf');
-                    const request = index.get(cpf);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.CLIENTS], 'readonly');
+                        const store = transaction.objectStore(STORES.CLIENTS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const clients = request.result;
+                            const client = clients.find(c => c.cpf === cpf);
+                            resolve(client);
+                        };
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllClients() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
-                    const store = transaction.objectStore(STORES.CLIENTES);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.CLIENTS], 'readonly');
+                        const store = transaction.objectStore(STORES.CLIENTS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Projetos
             async function addProject(project) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PROJETOS], 'readwrite');
-                    const store = transaction.objectStore(STORES.PROJETOS);
-                    const request = store.add(project);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.PROJECTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.PROJECTS);
+                        const request = store.add(project);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateProject(project) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PROJETOS], 'readwrite');
-                    const store = transaction.objectStore(STORES.PROJETOS);
-                    const request = store.put(project);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.PROJECTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.PROJECTS);
+                        const request = store.put(project);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getProjectById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PROJETOS], 'readonly');
-                    const store = transaction.objectStore(STORES.PROJETOS);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.PROJECTS], 'readonly');
+                        const store = transaction.objectStore(STORES.PROJECTS);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllProjects() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PROJETOS], 'readonly');
-                    const store = transaction.objectStore(STORES.PROJETOS);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.PROJECTS], 'readonly');
+                        const store = transaction.objectStore(STORES.PROJECTS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Links
             async function addLink(link) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.LINKS], 'readwrite');
-                    const store = transaction.objectStore(STORES.LINKS);
-                    const request = store.add(link);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.LINKS], 'readwrite');
+                        const store = transaction.objectStore(STORES.LINKS);
+                        const request = store.add(link);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateLink(link) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.LINKS], 'readwrite');
-                    const store = transaction.objectStore(STORES.LINKS);
-                    const request = store.put(link);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.LINKS], 'readwrite');
+                        const store = transaction.objectStore(STORES.LINKS);
+                        const request = store.put(link);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getLinkById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.LINKS], 'readonly');
-                    const store = transaction.objectStore(STORES.LINKS);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.LINKS], 'readonly');
+                        const store = transaction.objectStore(STORES.LINKS);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getLinksByClientId(clientId) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.LINKS], 'readonly');
-                    const store = transaction.objectStore(STORES.LINKS);
-                    const index = store.index('clienteId');
-                    const request = index.getAll(clientId);
-                    
-                    request.onsuccess = () => {
-                        const allLinks = request.result;
-                        // Também incluir links para todos os clientes (clienteId null ou undefined)
-                        const allRequest = store.getAll();
-                        allRequest.onsuccess = () => {
-                            const globalLinks = allRequest.result.filter(link => !link.clienteId);
-                            resolve([...allLinks, ...globalLinks].filter(link => link.status === 'active'));
+                    try {
+                        const transaction = db.transaction([STORES.LINKS], 'readonly');
+                        const store = transaction.objectStore(STORES.LINKS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const allLinks = request.result;
+                            const clientLinks = allLinks.filter(link => 
+                                (link.clienteId === clientId || !link.clienteId) && link.status === 'active'
+                            );
+                            resolve(clientLinks);
                         };
-                        allRequest.onerror = () => reject(allRequest.error);
-                    };
-                    request.onerror = () => reject(request.error);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllLinks() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.LINKS], 'readonly');
-                    const store = transaction.objectStore(STORES.LINKS);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.LINKS], 'readonly');
+                        const store = transaction.objectStore(STORES.LINKS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Orientações
             async function addOrientation(orientation) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ORIENTACOES], 'readwrite');
-                    const store = transaction.objectStore(STORES.ORIENTACOES);
-                    const request = store.add(orientation);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ORIENTATIONS], 'readwrite');
+                        const store = transaction.objectStore(STORES.ORIENTATIONS);
+                        const request = store.add(orientation);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateOrientation(orientation) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ORIENTACOES], 'readwrite');
-                    const store = transaction.objectStore(STORES.ORIENTACOES);
-                    const request = store.put(orientation);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ORIENTATIONS], 'readwrite');
+                        const store = transaction.objectStore(STORES.ORIENTATIONS);
+                        const request = store.put(orientation);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getOrientationById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
-                    const store = transaction.objectStore(STORES.ORIENTACOES);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ORIENTATIONS], 'readonly');
+                        const store = transaction.objectStore(STORES.ORIENTATIONS);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getOrientationsByClientId(clientId) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
-                    const store = transaction.objectStore(STORES.ORIENTACOES);
-                    const index = store.index('clienteId');
-                    const request = index.getAll(clientId);
-                    
-                    request.onsuccess = () => {
-                        const allOrientations = request.result;
-                        // Também incluir orientações para todos os clientes
-                        const allRequest = store.getAll();
-                        allRequest.onsuccess = () => {
-                            const globalOrientations = allRequest.result.filter(orientation => !orientation.clienteId);
-                            resolve([...allOrientations, ...globalOrientations].filter(orientation => orientation.status === 'active'));
+                    try {
+                        const transaction = db.transaction([STORES.ORIENTATIONS], 'readonly');
+                        const store = transaction.objectStore(STORES.ORIENTATIONS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const allOrientations = request.result;
+                            const clientOrientations = allOrientations.filter(orientation => 
+                                (orientation.clienteId === clientId || !orientation.clienteId) && orientation.status === 'active'
+                            );
+                            resolve(clientOrientations);
                         };
-                        allRequest.onerror = () => reject(allRequest.error);
-                    };
-                    request.onerror = () => reject(request.error);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllOrientations() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
-                    const store = transaction.objectStore(STORES.ORIENTACOES);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ORIENTATIONS], 'readonly');
+                        const store = transaction.objectStore(STORES.ORIENTATIONS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Alertas
             async function addAlert(alert) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ALERTAS], 'readwrite');
-                    const store = transaction.objectStore(STORES.ALERTAS);
-                    const request = store.add(alert);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ALERTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.ALERTS);
+                        const request = store.add(alert);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateAlert(alert) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ALERTAS], 'readwrite');
-                    const store = transaction.objectStore(STORES.ALERTAS);
-                    const request = store.put(alert);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ALERTS], 'readwrite');
+                        const store = transaction.objectStore(STORES.ALERTS);
+                        const request = store.put(alert);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAlertById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
-                    const store = transaction.objectStore(STORES.ALERTAS);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ALERTS], 'readonly');
+                        const store = transaction.objectStore(STORES.ALERTS);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAlertsByClientId(clientId) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
-                    const store = transaction.objectStore(STORES.ALERTAS);
-                    const index = store.index('clienteId');
-                    const request = index.getAll(clientId);
-                    
-                    request.onsuccess = () => {
-                        const allAlerts = request.result;
-                        // Também incluir alertas para todos os clientes
-                        const allRequest = store.getAll();
-                        allRequest.onsuccess = () => {
-                            const globalAlerts = allRequest.result.filter(alert => !alert.clienteId);
-                            resolve([...allAlerts, ...globalAlerts].filter(alert => alert.status === 'active'));
+                    try {
+                        const transaction = db.transaction([STORES.ALERTS], 'readonly');
+                        const store = transaction.objectStore(STORES.ALERTS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const allAlerts = request.result;
+                            const clientAlerts = allAlerts.filter(alert => 
+                                (alert.clienteId === clientId || !alert.clienteId) && alert.status === 'active'
+                            );
+                            resolve(clientAlerts);
                         };
-                        allRequest.onerror = () => reject(allRequest.error);
-                    };
-                    request.onerror = () => reject(request.error);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllAlerts() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
-                    const store = transaction.objectStore(STORES.ALERTAS);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.ALERTS], 'readonly');
+                        const store = transaction.objectStore(STORES.ALERTS);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Prazos
             async function getDeadlinesByClientId(clientId) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PRAZOS], 'readonly');
-                    const store = transaction.objectStore(STORES.PRAZOS);
-                    const index = store.index('clienteId');
-                    const request = index.getAll(clientId);
-                    
-                    request.onsuccess = () => resolve(request.result.filter(d => d.status !== 'concluido'));
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.DEADLINES], 'readonly');
+                        const store = transaction.objectStore(STORES.DEADLINES);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const allDeadlines = request.result;
+                            const clientDeadlines = allDeadlines.filter(deadline => 
+                                deadline.clienteId === clientId && deadline.status !== 'concluido'
+                            );
+                            resolve(clientDeadlines);
+                        };
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getAllDeadlines() {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.PRAZOS], 'readonly');
-                    const store = transaction.objectStore(STORES.PRAZOS);
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.DEADLINES], 'readonly');
+                        const store = transaction.objectStore(STORES.DEADLINES);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Arquivos
             async function addFile(file) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ARQUIVOS], 'readwrite');
-                    const store = transaction.objectStore(STORES.ARQUIVOS);
-                    const request = store.add(file);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.FILES], 'readwrite');
+                        const store = transaction.objectStore(STORES.FILES);
+                        const request = store.add(file);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function updateFile(file) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ARQUIVOS], 'readwrite');
-                    const store = transaction.objectStore(STORES.ARQUIVOS);
-                    const request = store.put(file);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.FILES], 'readwrite');
+                        const store = transaction.objectStore(STORES.FILES);
+                        const request = store.put(file);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getFileById(id) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ARQUIVOS], 'readonly');
-                    const store = transaction.objectStore(STORES.ARQUIVOS);
-                    const request = store.get(id);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const transaction = db.transaction([STORES.FILES], 'readonly');
+                        const store = transaction.objectStore(STORES.FILES);
+                        const request = store.get(id);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             async function getFilesByClientId(clientId) {
                 return new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORES.ARQUIVOS], 'readonly');
-                    const store = transaction.objectStore(STORES.ARQUIVOS);
-                    const index = store.index('clienteId');
-                    const request = index.getAll(clientId);
-                    
-                    request.onsuccess = () => {
-                        const allFiles = request.result;
-                        // Também incluir arquivos para todos os clientes
-                        const allRequest = store.getAll();
-                        allRequest.onsuccess = () => {
-                            const globalFiles = allRequest.result.filter(file => !file.clienteId);
-                            resolve([...allFiles, ...globalFiles].filter(file => file.status === 'active'));
+                    try {
+                        const transaction = db.transaction([STORES.FILES], 'readonly');
+                        const store = transaction.objectStore(STORES.FILES);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = () => {
+                            const allFiles = request.result;
+                            const clientFiles = allFiles.filter(file => 
+                                (file.clienteId === clientId || !file.clienteId) && file.status === 'active'
+                            );
+                            resolve(clientFiles);
                         };
-                        allRequest.onerror = () => reject(allRequest.error);
-                    };
-                    request.onerror = () => reject(request.error);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
             // Acessos
             async function registerAccess(userId, userType) {
                 return new Promise((resolve, reject) => {
-                    const accessData = {
-                        userId,
-                        userType,
-                        timestamp: new Date().toISOString(),
-                        ip: 'local' // Em um ambiente real, isso seria capturado do servidor
-                    };
-                    
-                    const transaction = db.transaction([STORES.ACESSOS], 'readwrite');
-                    const store = transaction.objectStore(STORES.ACESSOS);
-                    const request = store.add(accessData);
-                    
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+                    try {
+                        const accessData = {
+                            userId,
+                            userType,
+                            timestamp: new Date().toISOString(),
+                            ip: 'local'
+                        };
+                        
+                        const transaction = db.transaction([STORES.ACCESSES], 'readwrite');
+                        const store = transaction.objectStore(STORES.ACCESSES);
+                        const request = store.add(accessData);
+                        
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             }
             
@@ -2917,10 +3164,7 @@
             
             window.deleteProject = async function(projectId) {
                 if (confirm('Tem certeza que deseja excluir este projeto?')) {
-                    // Em um sistema real, aqui removeríamos do banco de dados
-                    // Por enquanto, apenas mostra uma mensagem
-                    showMessage('Projeto excluído com sucesso!', 'success');
-                    await loadAdminData();
+                    showMessage('Funcionalidade de exclusão ainda não implementada.', 'warning');
                 }
             };
             
@@ -2958,7 +3202,6 @@
                     showMessage(`Conteúdo ${content.status === 'active' ? 'ativado' : 'desativado'} com sucesso!`, 'success');
                     await loadAdminData();
                     
-                    // Se estamos na área do cliente, recarregar dados
                     if (!isAdmin && currentClient) {
                         loadClientData();
                     }
@@ -2966,15 +3209,307 @@
             };
             
             window.downloadFile = function(url, filename) {
-                // Em um sistema real, isso faria o download do arquivo
-                // Por enquanto, apenas abre em uma nova aba
                 window.open(url, '_blank');
                 showMessage(`Iniciando download de ${filename}`, 'success');
             };
-            
-            // Dados iniciais de exemplo (após o login do admin, eles podem ser criados)
-            // NÃO criamos dados de teste automaticamente, apenas o admin pode criar
         });
     </script>
+<script>
+/**
+ * 🚀 UNIVERSAL IDB SYNC - FIXED (ANTI-ZOMBIE DATA)
+ * - Correção: Persistência de DeviceID (Evita auto-download após F5).
+ * - Correção: Force Delete (Deleta do disco mesmo se não estiver no Cache).
+ */
+(function () {
+    // ==========================================================
+    // 1. CONFIGURAÇÕES & CONSTANTES
+    // ==========================================================
+    const SYNC_TABLE = 'lg_user_sync';
+    const CANONICAL_DB = 'portallegacy';
+    
+    // FIX 1: Mantém a identidade da aba mesmo após refresh (SessionStorage)
+    // Isso impede que a aba baixe de volta um dado que ela mesma acabou de deletar
+    let storedId = sessionStorage.getItem('sync_device_id');
+    if (!storedId) {
+        storedId = crypto.randomUUID();
+        sessionStorage.setItem('sync_device_id', storedId);
+    }
+    const DEVICE_ID = storedId;
+    
+    let isReplicating = false; 
+    let syncInterval = null;
+
+    // 🧠 CACHE INTELIGENTE
+    const syncCache = new Map();
+
+    // ==========================================================
+    // 2. UTILITÁRIOS
+    // ==========================================================
+    const getClient = () => window.supabaseClient || window.supabase;
+
+    const waitForSupabase = () => new Promise(resolve => {
+        const check = () => getClient() ? resolve(getClient()) : setTimeout(check, 100);
+        check();
+    });
+
+    async function getUserId() {
+        const client = await waitForSupabase();
+        const { data } = await client.auth.getSession();
+        return data?.session?.user?.id || null;
+    }
+
+    function generateSignature(value) {
+        // Garante que null/undefined sejam tratados iguais
+        if (value === null || value === undefined) return 'null';
+        return JSON.stringify(value);
+    }
+
+    // ==========================================================
+    // 3. INTERCEPTAÇÃO REAL-TIME (IndexDB -> Supabase)
+    // ==========================================================
+    const original = {
+        put: IDBObjectStore.prototype.put,
+        add: IDBObjectStore.prototype.add,
+        delete: IDBObjectStore.prototype.delete
+    };
+
+    async function scheduleRealtimeUpload(storeName, method, key, value) {
+        if (isReplicating) return; 
+
+        const client = getClient();
+        const userId = await getUserId();
+        if (!client || !userId) return;
+
+        const cacheKey = `${storeName}-${key}`;
+        
+        // Atualiza cache local imediatamente
+        if (method === 'delete') {
+            syncCache.delete(cacheKey);
+        } else {
+            syncCache.set(cacheKey, generateSignature(value));
+        }
+
+        // Envia para Supabase
+        // FIX: Tratamento de erro silencioso para evitar travar a UI
+        client.from(SYNC_TABLE).upsert({
+            user_id: userId,
+            db_name: CANONICAL_DB,
+            store_name: storeName,
+            record_key: String(key),
+            record_value: method === 'delete' ? null : value,
+            is_deleted: method === 'delete',
+            device_id: DEVICE_ID,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,db_name,store_name,record_key' })
+        .then(({ error }) => {
+            if (error) console.warn(`⚠️ Sync Upload Falhou:`, error.message);
+        });
+    }
+
+    IDBObjectStore.prototype.put = function (v, k) {
+        const req = original.put.apply(this, arguments);
+        const storeName = this.name;
+        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'put', k || e.target.result, v);
+        return req;
+    };
+
+    IDBObjectStore.prototype.add = function (v, k) {
+        const req = original.add.apply(this, arguments);
+        const storeName = this.name;
+        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'add', k || e.target.result, v);
+        return req;
+    };
+
+    IDBObjectStore.prototype.delete = function (k) {
+        const req = original.delete.apply(this, arguments);
+        const storeName = this.name;
+        req.onsuccess = (e) => scheduleRealtimeUpload(storeName, 'delete', k, null);
+        return req;
+    };
+
+    console.log('🪤 Sistema de Sync Híbrido Ativado (v2 Anti-Zombie)');
+
+    // ==========================================================
+    // 4. SMART UPLOAD LOOP (PC -> CLOUD)
+    // ==========================================================
+    async function smartUploadLoop() {
+        const userId = await getUserId();
+        const client = getClient();
+        if (!userId || !client) return;
+
+        const req = indexedDB.open(CANONICAL_DB);
+        
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            const storeNames = Array.from(db.objectStoreNames);
+
+            storeNames.forEach(storeName => {
+                const tx = db.transaction([storeName], 'readonly');
+                const store = tx.objectStore(storeName);
+                
+                Promise.all([
+                    new Promise(r => store.getAll().onsuccess = (ev) => r(ev.target.result)),
+                    new Promise(r => store.getAllKeys().onsuccess = (ev) => r(ev.target.result))
+                ]).then(async ([records, keys]) => {
+                    if (!records.length) return;
+
+                    const changedRecords = [];
+
+                    records.forEach((item, index) => {
+                        const key = String(keys[index]);
+                        const cacheKey = `${storeName}-${key}`;
+                        const currentSig = generateSignature(item);
+
+                        // Só sobe se mudou em relação ao que sabemos
+                        if (syncCache.get(cacheKey) !== currentSig) {
+                            changedRecords.push({
+                                user_id: userId,
+                                db_name: CANONICAL_DB,
+                                store_name: storeName,
+                                record_key: key,
+                                record_value: item,
+                                is_deleted: false,
+                                device_id: DEVICE_ID,
+                                updated_at: new Date().toISOString()
+                            });
+                            syncCache.set(cacheKey, currentSig);
+                        }
+                    });
+
+                    if (changedRecords.length > 0) {
+                        console.log(`📤 Upload Batch: ${changedRecords.length} itens`);
+                        await client.from(SYNC_TABLE).upsert(changedRecords, { 
+                            onConflict: 'user_id,db_name,store_name,record_key' 
+                        });
+                    }
+                });
+            });
+        };
+    }
+
+    // ==========================================================
+    // 5. SMART DOWNLOAD LOOP (CLOUD -> PC)
+    // ==========================================================
+    async function smartDownloadLoop() {
+        const userId = await getUserId();
+        const client = getClient();
+        if (!userId || !client) return;
+
+        const { data, error } = await client
+            .from(SYNC_TABLE)
+            .select('*')
+            .eq('user_id', userId)
+            .eq('db_name', CANONICAL_DB);
+
+        if (error || !data || !data.length) return;
+
+        const req = indexedDB.open(CANONICAL_DB);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            const localStores = Array.from(db.objectStoreNames);
+            
+            const validRecords = data.filter(r => localStores.includes(r.store_name));
+            if (!validRecords.length) return;
+
+            const tx = db.transaction([...new Set(validRecords.map(r => r.store_name))], 'readwrite');
+            isReplicating = true;
+
+            let writes = 0;
+
+            validRecords.forEach(r => {
+                // ANTI-ECHO: Se o dado veio deste mesmo DEVICE_ID, ignoramos.
+                // Como agora usamos sessionStorage, isso persiste após refresh.
+                if (r.device_id === DEVICE_ID) return;
+
+                const store = tx.objectStore(r.store_name);
+                // Converte chave numérica se necessário
+                const key = !isNaN(r.record_key) ? Number(r.record_key) : r.record_key;
+                const cacheKey = `${r.store_name}-${r.record_key}`;
+                
+                // LÓGICA DE DELETE (CORRIGIDA)
+                if (r.is_deleted) {
+                    // FIX: Deleta incondicionalmente. Se não existir, não dá erro.
+                    // Antes verificávamos o cache, o que impedia deletes em sessões novas.
+                    store.delete(key);
+                    
+                    if (syncCache.has(cacheKey)) {
+                        syncCache.delete(cacheKey);
+                        writes++;
+                    }
+                    return;
+                }
+
+                // LÓGICA DE UPDATE/INSERT
+                const incomingSig = generateSignature(r.record_value);
+                const localSig = syncCache.get(cacheKey);
+
+                if (incomingSig === localSig) {
+                    return; 
+                }
+
+                // Atualiza IDB
+                const val = r.record_value;
+                if (store.keyPath && val && typeof val === 'object') {
+                    // Se a store usa keyPath inline, injetamos a chave se necessário
+                    if (!val[store.keyPath]) val[store.keyPath] = key;
+                    store.put(val);
+                } else {
+                    store.put(val, key);
+                }
+                
+                syncCache.set(cacheKey, incomingSig);
+                writes++;
+            });
+
+            tx.oncomplete = () => {
+                isReplicating = false;
+                if (writes > 0) console.log(`📥 Download Sync: ${writes} alterações aplicadas.`);
+            };
+            
+            tx.onerror = () => isReplicating = false;
+        };
+    }
+
+    // ==========================================================
+    // 6. INICIALIZAÇÃO
+    // ==========================================================
+    async function startService() {
+        const userId = await getUserId();
+        if (!userId) return;
+
+        console.log('✅ Serviço de Sync Iniciado para:', userId);
+        const client = getClient();
+
+        client.channel('global-sync-live')
+            .on('postgres_changes', { 
+                event: '*', schema: 'public', table: SYNC_TABLE, filter: `user_id=eq.${userId}` 
+            }, payload => {
+                // Só dispara download se o evento veio de OUTRO device
+                if (payload.new && payload.new.device_id !== DEVICE_ID) {
+                    smartDownloadLoop();
+                }
+            })
+            .subscribe();
+
+        // Ordem estratégica: Carrega Cache Local -> Baixa Nuvem -> Inicia Loop
+        await smartUploadLoop(); 
+        setTimeout(smartDownloadLoop, 500); // Pequeno delay para garantir que o Upload populou o cache
+
+        if (syncInterval) clearInterval(syncInterval);
+        syncInterval = setInterval(async () => {
+            await smartUploadLoop();
+            await smartDownloadLoop();
+        }, 10000);
+    }
+
+    waitForSupabase().then(client => {
+        client.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) startService();
+        });
+        getUserId().then(id => { if (id) startService(); });
+    });
+
+})();
+</script>
 </body>
 </html>
