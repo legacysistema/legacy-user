@@ -1,0 +1,2980 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal do Cliente - LG Plataforma</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Reset e Estilos Gerais */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        :root {
+            --primary: #00d9ff;
+            --primary-dark: #0099cc;
+            --secondary: #9d4edd;
+            --secondary-dark: #7b2cbf;
+            --dark: #0a0a0f;
+            --dark-light: #12121a;
+            --darker: #050509;
+            --light: #f0f0f5;
+            --gray: #8888a0;
+            --success: #00cc88;
+            --warning: #ffaa00;
+            --danger: #ff3366;
+            --glass: rgba(20, 20, 30, 0.7);
+            --glass-light: rgba(30, 30, 45, 0.8);
+            --border: rgba(100, 100, 150, 0.2);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --neon-glow: 0 0 10px var(--primary), 0 0 20px var(--primary);
+            --neon-glow-secondary: 0 0 10px var(--secondary), 0 0 20px var(--secondary);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: var(--light);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Estilos Glass Neon */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .glass-card:hover {
+            box-shadow: var(--shadow), var(--neon-glow);
+            border-color: var(--primary);
+        }
+
+        .glass-card-secondary {
+            border-color: rgba(157, 78, 221, 0.3);
+        }
+
+        .glass-card-secondary:hover {
+            box-shadow: var(--shadow), var(--neon-glow-secondary);
+            border-color: var(--secondary);
+        }
+
+        .neon-text {
+            color: var(--primary);
+            text-shadow: 0 0 5px var(--primary);
+        }
+
+        .neon-text-secondary {
+            color: var(--secondary);
+            text-shadow: 0 0 5px var(--secondary);
+        }
+
+        /* Botões */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--darker);
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(157, 78, 221, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(157, 78, 221, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #cc2255);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        /* Formulários */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(10, 10, 15, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: var(--gray);
+        }
+
+        /* Tabelas */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .table th {
+            background: rgba(0, 217, 255, 0.1);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 2px solid rgba(0, 217, 255, 0.3);
+        }
+
+        .table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.1);
+        }
+
+        .table tr:hover {
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(0, 204, 136, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(0, 217, 255, 0.2);
+            color: var(--primary);
+        }
+
+        /* Layout */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .logo i {
+            color: var(--primary);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        /* Progresso */
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: rgba(100, 100, 150, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        /* Listas */
+        .list {
+            list-style: none;
+        }
+
+        .list-item {
+            padding: 16px;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(0, 217, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 14px 24px;
+            background: transparent;
+            border: none;
+            color: var(--gray);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--light);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Links */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .link-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: var(--glass-light);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--light);
+        }
+
+        .link-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: var(--neon-glow);
+        }
+
+        .link-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(0, 217, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .link-info h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .link-info p {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        /* Alertas */
+        .alert {
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-warning {
+            background: rgba(255, 170, 0, 0.1);
+            border-left-color: var(--warning);
+        }
+
+        .alert-success {
+            background: rgba(0, 204, 136, 0.1);
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: rgba(255, 51, 102, 0.1);
+            border-left-color: var(--danger);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 9, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--dark-light);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow), var(--neon-glow);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--light);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .links-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .table th, .table td {
+                padding: 10px 12px;
+            }
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Status dos projetos */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.active {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-dot.pending {
+            background: var(--warning);
+            box-shadow: 0 0 8px var(--warning);
+        }
+
+        .status-dot.inactive {
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        /* Login */
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .switch-login {
+            text-align: center;
+            margin-top: 24px;
+            color: var(--gray);
+        }
+
+        .switch-login a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Utilitários */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 217, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="container">
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-user-shield"></i> Portal LG</h1>
+                <p>Acesse sua conta para visualizar seus projetos</p>
+            </div>
+            
+            <div class="glass-card">
+                <div id="loginTypeSelector" class="tabs mb-20">
+                    <button class="tab active" data-type="client">Cliente</button>
+                    <button class="tab" data-type="admin">Administrador</button>
+                </div>
+                
+                <!-- Login do Cliente -->
+                <div id="clientLogin" class="login-form">
+                    <h2 class="card-title">Login do Cliente</h2>
+                    <form id="clientLoginForm">
+                        <div class="form-group">
+                            <label class="form-label" for="clientCpf">CPF</label>
+                            <input type="text" id="clientCpf" class="form-control" placeholder="Digite seu CPF" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="clientPassword">Senha</label>
+                            <input type="password" id="clientPassword" class="form-control" placeholder="Digite sua senha" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-sign-in-alt"></i> Entrar
+                        </button>
+                    </form>
+                    <div class="switch-login">
+                        <p>É administrador? <a href="#" id="switchToAdmin">Clique aqui</a></p>
+                    </div>
+                </div>
+                
+                <!-- Login do Administrador -->
+                <div id="adminLogin" class="login-form hidden">
+                    <h2 class="card-title">Login Administrativo</h2>
+                    <form id="adminLoginForm">
+                        <div class="form-group">
+                            <label class="form-label" for="adminEmail">E-mail</label>
+                            <input type="email" id="adminEmail" class="form-control" placeholder="Digite seu e-mail" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="adminPassword">Senha</label>
+                            <input type="password" id="adminPassword" class="form-control" placeholder="Digite sua senha" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                            <i class="fas fa-key"></i> Acessar Admin
+                        </button>
+                    </form>
+                    <div class="switch-login">
+                        <p>É cliente? <a href="#" id="switchToClient">Clique aqui</a></p>
+                    </div>
+                </div>
+                
+                <div id="loginMessage" class="alert hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área do Cliente -->
+    <div id="clientArea" class="container hidden">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-user-circle"></i>
+                <span>Portal do Cliente</span>
+            </div>
+            <div class="user-menu">
+                <div class="user-info">
+                    <div class="avatar" id="clientAvatar">CL</div>
+                    <div>
+                        <div id="clientName">Cliente</div>
+                        <small id="clientCpfDisplay">CPF: ***.***.***-**</small>
+                    </div>
+                </div>
+                <button class="btn btn-outline" id="clientLogout">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        <div id="clientAlerts" class="glass-card">
+            <h2 class="card-title"><i class="fas fa-bell"></i> Alertas e Notificações</h2>
+            <div id="alertsContainer"></div>
+        </div>
+
+        <!-- Dashboard do Cliente -->
+        <div class="dashboard-grid">
+            <!-- Progresso do Projeto -->
+            <div class="glass-card">
+                <h2 class="card-title"><i class="fas fa-chart-line"></i> Progresso do Projeto</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="projectProgressBar" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span id="currentStage">Inicial</span>
+                        <span id="projectPercentage">0%</span>
+                        <span id="finalStage">Conclusão</span>
+                    </div>
+                </div>
+                <div id="projectStatus" class="mt-20"></div>
+            </div>
+
+            <!-- Prazos -->
+            <div class="glass-card glass-card-secondary">
+                <h2 class="card-title"><i class="fas fa-calendar-alt"></i> Prazos e Datas</h2>
+                <div id="deadlinesContainer"></div>
+            </div>
+        </div>
+
+        <!-- Abas de Conteúdo -->
+        <div class="glass-card">
+            <div class="tabs" id="clientTabs">
+                <button class="tab active" data-tab="orientations">Orientações</button>
+                <button class="tab" data-tab="links">Links Importantes</button>
+                <button class="tab" data-tab="files">Arquivos para Download</button>
+                <button class="tab" data-tab="timeline">Linha do Tempo</button>
+            </div>
+
+            <!-- Orientações -->
+            <div id="orientations" class="tab-content active">
+                <div id="orientationsContainer"></div>
+            </div>
+
+            <!-- Links -->
+            <div id="links" class="tab-content">
+                <div class="links-grid" id="linksContainer"></div>
+            </div>
+
+            <!-- Arquivos -->
+            <div id="files" class="tab-content">
+                <div id="filesContainer"></div>
+            </div>
+
+            <!-- Linha do Tempo -->
+            <div id="timeline" class="tab-content">
+                <div id="timelineContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área Administrativa -->
+    <div id="adminArea" class="container hidden">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-user-shield"></i>
+                <span>Área Administrativa</span>
+            </div>
+            <div class="user-menu">
+                <button class="btn btn-outline" id="showClientView">
+                    <i class="fas fa-eye"></i> Visualizar como Cliente
+                </button>
+                <button class="btn btn-danger" id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </div>
+        </div>
+
+        <!-- Alertas Admin -->
+        <div class="glass-card">
+            <h2 class="card-title"><i class="fas fa-tachometer-alt"></i> Dashboard Administrativo</h2>
+            <div class="dashboard-grid">
+                <div class="glass-card">
+                    <h3><i class="fas fa-users"></i> Clientes Ativos</h3>
+                    <p id="activeClientsCount" style="font-size: 36px; font-weight: 700; color: var(--primary);">0</p>
+                </div>
+                <div class="glass-card">
+                    <h3><i class="fas fa-project-diagram"></i> Projetos Ativos</h3>
+                    <p id="activeProjectsCount" style="font-size: 36px; font-weight: 700; color: var(--secondary);">0</p>
+                </div>
+                <div class="glass-card">
+                    <h3><i class="fas fa-clock"></i> Prazos Hoje</h3>
+                    <p id="todayDeadlinesCount" style="font-size: 36px; font-weight: 700; color: var(--warning);">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Abas da Administração -->
+        <div class="glass-card">
+            <div class="tabs" id="adminTabs">
+                <button class="tab active" data-tab="clients">Gerenciar Clientes</button>
+                <button class="tab" data-tab="projects">Gerenciar Projetos</button>
+                <button class="tab" data-tab="alerts">Alertas e Notificações</button>
+                <button class="tab" data-tab="content">Conteúdo Personalizado</button>
+            </div>
+
+            <!-- Gerenciar Clientes -->
+            <div id="clients" class="tab-content active">
+                <div class="text-center mb-20">
+                    <button class="btn btn-primary" id="addClientBtn">
+                        <i class="fas fa-user-plus"></i> Adicionar Cliente
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" id="clientsTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Status</th>
+                                <th>Projeto</th>
+                                <th>Último Acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gerenciar Projetos -->
+            <div id="projects" class="tab-content">
+                <div class="text-center mb-20">
+                    <button class="btn btn-primary" id="addProjectBtn">
+                        <i class="fas fa-folder-plus"></i> Adicionar Projeto
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" id="projectsTable">
+                        <thead>
+                            <tr>
+                                <th>Nome do Projeto</th>
+                                <th>Cliente</th>
+                                <th>Progresso</th>
+                                <th>Status</th>
+                                <th>Prazo Final</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alertas e Notificações -->
+            <div id="alerts" class="tab-content">
+                <div class="text-center mb-20">
+                    <button class="btn btn-primary" id="addAlertBtn">
+                        <i class="fas fa-bell-plus"></i> Criar Alerta
+                    </button>
+                </div>
+                <div id="adminAlertsContainer"></div>
+            </div>
+
+            <!-- Conteúdo Personalizado -->
+            <div id="content" class="tab-content">
+                <div class="glass-card mb-20">
+                    <h3 class="card-title"><i class="fas fa-link"></i> Gerenciar Links</h3>
+                    <div class="text-center mb-20">
+                        <button class="btn btn-primary" id="addLinkBtn">
+                            <i class="fas fa-plus-circle"></i> Adicionar Link
+                        </button>
+                    </div>
+                    <div id="adminLinksContainer"></div>
+                </div>
+                
+                <div class="glass-card">
+                    <h3 class="card-title"><i class="fas fa-file-alt"></i> Gerenciar Orientações</h3>
+                    <div class="text-center mb-20">
+                        <button class="btn btn-primary" id="addOrientationBtn">
+                            <i class="fas fa-plus-circle"></i> Adicionar Orientação
+                        </button>
+                    </div>
+                    <div id="adminOrientationsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Cliente -->
+    <div id="clientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="clientModalTitle">Adicionar Cliente</h2>
+                <button class="modal-close" id="closeClientModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="clientForm">
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientName">Nome Completo</label>
+                        <input type="text" id="modalClientName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientCpf">CPF</label>
+                        <input type="text" id="modalClientCpf" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientEmail">E-mail</label>
+                        <input type="email" id="modalClientEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientPassword">Senha</label>
+                        <input type="password" id="modalClientPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientStatus">Status</label>
+                        <select id="modalClientStatus" class="form-control">
+                            <option value="active">Ativo</option>
+                            <option value="inactive">Inativo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalClientProject">Projeto Vinculado</label>
+                        <select id="modalClientProject" class="form-control">
+                            <option value="">Nenhum</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="modalClientId">
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-save"></i> Salvar Cliente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Projeto -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="projectModalTitle">Adicionar Projeto</h2>
+                <button class="modal-close" id="closeProjectModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="projectForm">
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectName">Nome do Projeto</label>
+                        <input type="text" id="modalProjectName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectClient">Cliente</label>
+                        <select id="modalProjectClient" class="form-control" required>
+                            <option value="">Selecione um cliente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectDescription">Descrição</label>
+                        <textarea id="modalProjectDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectProgress">Progresso (%)</label>
+                        <input type="range" id="modalProjectProgress" class="form-control" min="0" max="100" value="0">
+                        <span id="modalProjectProgressValue">0%</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectStatus">Status</label>
+                        <select id="modalProjectStatus" class="form-control">
+                            <option value="planning">Planejamento</option>
+                            <option value="in_progress">Em Andamento</option>
+                            <option value="review">Em Revisão</option>
+                            <option value="completed">Concluído</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectDeadline">Prazo Final</label>
+                        <input type="date" id="modalProjectDeadline" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalProjectStages">Etapas (uma por linha)</label>
+                        <textarea id="modalProjectStages" class="form-control" rows="5" placeholder="Exemplo:
+1. Briefing
+2. Design
+3. Desenvolvimento
+4. Revisão
+5. Entrega"></textarea>
+                    </div>
+                    <input type="hidden" id="modalProjectId">
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-save"></i> Salvar Projeto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Conteúdo -->
+    <div id="contentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="contentModalTitle">Adicionar Conteúdo</h2>
+                <button class="modal-close" id="closeContentModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="contentForm">
+                    <div class="form-group">
+                        <label class="form-label" for="modalContentType">Tipo de Conteúdo</label>
+                        <select id="modalContentType" class="form-control">
+                            <option value="link">Link</option>
+                            <option value="orientation">Orientação</option>
+                            <option value="alert">Alerta</option>
+                            <option value="file">Arquivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalContentTitle">Título</label>
+                        <input type="text" id="modalContentTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalContentDescription">Descrição</label>
+                        <textarea id="modalContentDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group" id="modalContentUrlGroup">
+                        <label class="form-label" for="modalContentUrl">URL/Link</label>
+                        <input type="url" id="modalContentUrl" class="form-control">
+                    </div>
+                    <div class="form-group" id="modalContentIconGroup">
+                        <label class="form-label" for="modalContentIcon">Ícone (FontAwesome)</label>
+                        <input type="text" id="modalContentIcon" class="form-control" placeholder="Ex: fas fa-link">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalContentClient">Cliente (deixe vazio para todos)</label>
+                        <select id="modalContentClient" class="form-control">
+                            <option value="">Todos os Clientes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalContentStatus">Status</label>
+                        <select id="modalContentStatus" class="form-control">
+                            <option value="active">Ativo</option>
+                            <option value="inactive">Inativo</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="modalContentId">
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-save"></i> Salvar Conteúdo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sistema de Gerenciamento - LG Plataforma
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuração do IndexedDB
+            const DB_NAME = 'lg_plataforma';
+            const DB_VERSION = 1;
+            
+            // Stores do banco de dados
+            const STORES = {
+                ADMIN: 'admin',
+                CLIENTES: 'clientes',
+                PROJETOS: 'projetos',
+                ETAPAS: 'etapas',
+                LINKS: 'links',
+                ORIENTACOES: 'orientacoes',
+                PRAZOS: 'prazos',
+                ALERTAS: 'alertas',
+                ARQUIVOS: 'arquivos',
+                ACESSOS: 'acessos'
+            };
+            
+            let db = null;
+            let currentUser = null;
+            let currentClient = null;
+            let isAdmin = false;
+            
+            // Inicialização do sistema
+            initSystem();
+            
+            // Função para inicializar o sistema
+            async function initSystem() {
+                await initDatabase();
+                setupEventListeners();
+                showLoginScreen();
+                checkAutoLogin();
+            }
+            
+            // Inicializar o banco de dados IndexedDB
+            function initDatabase() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    
+                    request.onerror = (event) => {
+                        console.error('Erro ao abrir o banco de dados:', event.target.error);
+                        reject(event.target.error);
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        db = event.target.result;
+                        console.log('Banco de dados inicializado com sucesso');
+                        resolve();
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        const database = event.target.result;
+                        
+                        // Criar stores se não existirem
+                        if (!database.objectStoreNames.contains(STORES.ADMIN)) {
+                            const adminStore = database.createObjectStore(STORES.ADMIN, { keyPath: 'id', autoIncrement: true });
+                            adminStore.createIndex('email', 'email', { unique: true });
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.CLIENTES)) {
+                            const clientesStore = database.createObjectStore(STORES.CLIENTES, { keyPath: 'id', autoIncrement: true });
+                            clientesStore.createIndex('cpf', 'cpf', { unique: true });
+                            clientesStore.createIndex('email', 'email', { unique: true });
+                            clientesStore.createIndex('status', 'status');
+                            clientesStore.createIndex('projetoId', 'projetoId');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.PROJETOS)) {
+                            const projetosStore = database.createObjectStore(STORES.PROJETOS, { keyPath: 'id', autoIncrement: true });
+                            projetosStore.createIndex('clienteId', 'clienteId');
+                            projetosStore.createIndex('status', 'status');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.ETAPAS)) {
+                            const etapasStore = database.createObjectStore(STORES.ETAPAS, { keyPath: 'id', autoIncrement: true });
+                            etapasStore.createIndex('projetoId', 'projetoId');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.LINKS)) {
+                            const linksStore = database.createObjectStore(STORES.LINKS, { keyPath: 'id', autoIncrement: true });
+                            linksStore.createIndex('clienteId', 'clienteId');
+                            linksStore.createIndex('status', 'status');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.ORIENTACOES)) {
+                            const orientacoesStore = database.createObjectStore(STORES.ORIENTACOES, { keyPath: 'id', autoIncrement: true });
+                            orientacoesStore.createIndex('clienteId', 'clienteId');
+                            orientacoesStore.createIndex('status', 'status');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.PRAZOS)) {
+                            const prazosStore = database.createObjectStore(STORES.PRAZOS, { keyPath: 'id', autoIncrement: true });
+                            prazosStore.createIndex('clienteId', 'clienteId');
+                            prazosStore.createIndex('projetoId', 'projetoId');
+                            prazosStore.createIndex('data', 'data');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.ALERTAS)) {
+                            const alertasStore = database.createObjectStore(STORES.ALERTAS, { keyPath: 'id', autoIncrement: true });
+                            alertasStore.createIndex('clienteId', 'clienteId');
+                            alertasStore.createIndex('status', 'status');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.ARQUIVOS)) {
+                            const arquivosStore = database.createObjectStore(STORES.ARQUIVOS, { keyPath: 'id', autoIncrement: true });
+                            arquivosStore.createIndex('clienteId', 'clienteId');
+                            arquivosStore.createIndex('status', 'status');
+                        }
+                        
+                        if (!database.objectStoreNames.contains(STORES.ACESSOS)) {
+                            database.createObjectStore(STORES.ACESSOS, { keyPath: 'id', autoIncrement: true });
+                        }
+                        
+                        console.log('Estrutura do banco de dados criada');
+                    };
+                });
+            }
+            
+            // Configurar administrador padrão
+            async function setupDefaultAdmin() {
+                const adminExists = await getAdminByEmail('rc@rc.com');
+                
+                if (!adminExists) {
+                    const defaultAdmin = {
+                        email: 'rc@rc.com',
+                        senha: '12', // Senha simples para demonstração
+                        nome: 'Administrador RC',
+                        criadoEm: new Date().toISOString()
+                    };
+                    
+                    await addAdmin(defaultAdmin);
+                    console.log('Administrador padrão criado');
+                }
+            }
+            
+            // Configurar ouvintes de eventos
+            function setupEventListeners() {
+                // Login
+                document.getElementById('clientLoginForm').addEventListener('submit', handleClientLogin);
+                document.getElementById('adminLoginForm').addEventListener('submit', handleAdminLogin);
+                
+                // Trocar tipo de login
+                document.querySelectorAll('[data-type]').forEach(tab => {
+                    tab.addEventListener('click', switchLoginType);
+                });
+                
+                document.getElementById('switchToAdmin').addEventListener('click', () => {
+                    document.querySelector('[data-type="admin"]').click();
+                });
+                
+                document.getElementById('switchToClient').addEventListener('click', () => {
+                    document.querySelector('[data-type="client"]').click();
+                });
+                
+                // Logout
+                document.getElementById('clientLogout').addEventListener('click', logout);
+                document.getElementById('adminLogout').addEventListener('click', logout);
+                
+                // Tabs do cliente
+                document.querySelectorAll('#clientTabs .tab').forEach(tab => {
+                    tab.addEventListener('click', switchClientTab);
+                });
+                
+                // Tabs do admin
+                document.querySelectorAll('#adminTabs .tab').forEach(tab => {
+                    tab.addEventListener('click', switchAdminTab);
+                });
+                
+                // Botões do admin
+                document.getElementById('addClientBtn').addEventListener('click', () => openClientModal());
+                document.getElementById('addProjectBtn').addEventListener('click', () => openProjectModal());
+                document.getElementById('addAlertBtn').addEventListener('click', () => openContentModal('alert'));
+                document.getElementById('addLinkBtn').addEventListener('click', () => openContentModal('link'));
+                document.getElementById('addOrientationBtn').addEventListener('click', () => openContentModal('orientation'));
+                
+                // Visualizar como cliente
+                document.getElementById('showClientView').addEventListener('click', showClientView);
+                
+                // Modais
+                document.getElementById('closeClientModal').addEventListener('click', () => closeModal('clientModal'));
+                document.getElementById('closeProjectModal').addEventListener('click', () => closeModal('projectModal'));
+                document.getElementById('closeContentModal').addEventListener('click', () => closeModal('contentModal'));
+                
+                // Formulários modais
+                document.getElementById('clientForm').addEventListener('submit', handleClientFormSubmit);
+                document.getElementById('projectForm').addEventListener('submit', handleProjectFormSubmit);
+                document.getElementById('contentForm').addEventListener('submit', handleContentFormSubmit);
+                
+                // Alterar tipo de conteúdo no modal
+                document.getElementById('modalContentType').addEventListener('change', updateContentModalFields);
+                
+                // Atualizar valor do progresso do projeto
+                document.getElementById('modalProjectProgress').addEventListener('input', function() {
+                    document.getElementById('modalProjectProgressValue').textContent = this.value + '%';
+                });
+            }
+            
+            // Funções de navegação
+            function showLoginScreen() {
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('clientArea').classList.add('hidden');
+                document.getElementById('adminArea').classList.add('hidden');
+                resetLoginForms();
+            }
+            
+            function showClientArea() {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('clientArea').classList.remove('hidden');
+                document.getElementById('adminArea').classList.add('hidden');
+                loadClientData();
+            }
+            
+            function showAdminArea() {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('clientArea').classList.add('hidden');
+                document.getElementById('adminArea').classList.remove('hidden');
+                loadAdminData();
+            }
+            
+            function showClientView() {
+                if (currentUser && currentUser.id) {
+                    const clientId = prompt("Digite o ID do cliente para visualizar como ele:");
+                    if (clientId) {
+                        getClientById(parseInt(clientId)).then(client => {
+                            if (client) {
+                                currentClient = client;
+                                showClientArea();
+                            } else {
+                                showMessage('Cliente não encontrado', 'danger');
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // Funções de login
+            function switchLoginType(e) {
+                const type = e.target.getAttribute('data-type');
+                document.querySelectorAll('#loginTypeSelector .tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                e.target.classList.add('active');
+                
+                if (type === 'client') {
+                    document.getElementById('clientLogin').classList.remove('hidden');
+                    document.getElementById('adminLogin').classList.add('hidden');
+                } else {
+                    document.getElementById('clientLogin').classList.add('hidden');
+                    document.getElementById('adminLogin').classList.remove('hidden');
+                }
+                
+                document.getElementById('loginMessage').classList.add('hidden');
+            }
+            
+            async function handleClientLogin(e) {
+                e.preventDefault();
+                const cpf = document.getElementById('clientCpf').value;
+                const password = document.getElementById('clientPassword').value;
+                
+                const client = await getClientByCpf(cpf);
+                
+                if (!client) {
+                    showLoginMessage('CPF não cadastrado', 'danger');
+                    return;
+                }
+                
+                if (client.status !== 'active') {
+                    showLoginMessage('Conta desativada. Entre em contato com o administrador.', 'danger');
+                    return;
+                }
+                
+                if (client.senha !== password) {
+                    showLoginMessage('Senha incorreta', 'danger');
+                    return;
+                }
+                
+                // Login bem-sucedido
+                currentClient = client;
+                isAdmin = false;
+                
+                // Registrar acesso
+                await registerAccess(client.id, 'client');
+                
+                // Salvar sessão
+                localStorage.setItem('lg_client_session', JSON.stringify({
+                    id: client.id,
+                    cpf: client.cpf,
+                    timestamp: new Date().getTime()
+                }));
+                
+                showClientArea();
+            }
+            
+            async function handleAdminLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('adminEmail').value;
+                const password = document.getElementById('adminPassword').value;
+                
+                // Verificar credenciais do administrador
+                if (email === 'rc@rc.com' && password === '12') {
+                    // Verificar se admin já existe no banco, se não, criar
+                    let admin = await getAdminByEmail(email);
+                    
+                    if (!admin) {
+                        admin = {
+                            email: email,
+                            senha: password,
+                            nome: 'Administrador RC',
+                            criadoEm: new Date().toISOString()
+                        };
+                        
+                        await addAdmin(admin);
+                    }
+                    
+                    // Login bem-sucedido
+                    currentUser = admin;
+                    isAdmin = true;
+                    
+                    // Registrar acesso
+                    await registerAccess(admin.id, 'admin');
+                    
+                    // Salvar sessão
+                    localStorage.setItem('lg_admin_session', JSON.stringify({
+                        id: admin.id,
+                        email: admin.email,
+                        timestamp: new Date().getTime()
+                    }));
+                    
+                    showAdminArea();
+                } else {
+                    showLoginMessage('Credenciais administrativas inválidas', 'danger');
+                }
+            }
+            
+            function checkAutoLogin() {
+                // Verificar se há sessão de cliente
+                const clientSession = localStorage.getItem('lg_client_session');
+                if (clientSession) {
+                    const session = JSON.parse(clientSession);
+                    // Verificar se a sessão expirou (24 horas)
+                    if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
+                        getClientById(session.id).then(client => {
+                            if (client && client.status === 'active') {
+                                currentClient = client;
+                                isAdmin = false;
+                                showClientArea();
+                                return;
+                            }
+                        });
+                    }
+                }
+                
+                // Verificar se há sessão de admin
+                const adminSession = localStorage.getItem('lg_admin_session');
+                if (adminSession) {
+                    const session = JSON.parse(adminSession);
+                    // Verificar se a sessão expirou (24 horas)
+                    if (new Date().getTime() - session.timestamp < 24 * 60 * 60 * 1000) {
+                        getAdminByEmail(session.email).then(admin => {
+                            if (admin) {
+                                currentUser = admin;
+                                isAdmin = true;
+                                showAdminArea();
+                            }
+                        });
+                    }
+                }
+                
+                // Configurar admin padrão se não houver sessão
+                setupDefaultAdmin();
+            }
+            
+            function logout() {
+                currentUser = null;
+                currentClient = null;
+                isAdmin = false;
+                localStorage.removeItem('lg_client_session');
+                localStorage.removeItem('lg_admin_session');
+                showLoginScreen();
+            }
+            
+            // Funções para carregar dados
+            async function loadClientData() {
+                if (!currentClient) return;
+                
+                // Atualizar informações do cliente
+                document.getElementById('clientName').textContent = currentClient.nome;
+                document.getElementById('clientCpfDisplay').textContent = `CPF: ${formatCpf(currentClient.cpf)}`;
+                document.getElementById('clientAvatar').textContent = getInitials(currentClient.nome);
+                
+                // Carregar projeto do cliente
+                const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
+                
+                // Atualizar progresso do projeto
+                if (projeto) {
+                    document.getElementById('projectProgressBar').style.width = projeto.progresso + '%';
+                    document.getElementById('projectPercentage').textContent = projeto.progresso + '%';
+                    
+                    // Atualizar status do projeto
+                    const statusText = {
+                        'planning': 'Planejamento',
+                        'in_progress': 'Em Andamento',
+                        'review': 'Em Revisão',
+                        'completed': 'Concluído'
+                    };
+                    
+                    document.getElementById('projectStatus').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-project-diagram"></i>
+                            <div>
+                                <strong>${projeto.nome}</strong>
+                                <p>Status: <span class="badge badge-success">${statusText[projeto.status] || projeto.status}</span></p>
+                                ${projeto.descricao ? `<p>${projeto.descricao}</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Carregar etapas do projeto
+                    if (projeto.etapas && projeto.etapas.length > 0) {
+                        const currentStage = Math.floor(projeto.progresso / (100 / projeto.etapas.length));
+                        document.getElementById('currentStage').textContent = projeto.etapas[currentStage] || 'Início';
+                        document.getElementById('finalStage').textContent = projeto.etapas[projeto.etapas.length - 1] || 'Conclusão';
+                    }
+                }
+                
+                // Carregar alertas
+                await loadClientAlerts();
+                
+                // Carregar prazos
+                await loadClientDeadlines();
+                
+                // Carregar orientações
+                await loadClientOrientations();
+                
+                // Carregar links
+                await loadClientLinks();
+                
+                // Carregar arquivos
+                await loadClientFiles();
+                
+                // Carregar linha do tempo
+                await loadClientTimeline();
+            }
+            
+            async function loadAdminData() {
+                // Carregar estatísticas
+                const clientes = await getAllClients();
+                const projetos = await getAllProjects();
+                const prazos = await getAllDeadlines();
+                
+                // Atualizar contadores
+                const activeClients = clientes.filter(c => c.status === 'active').length;
+                const activeProjects = projetos.filter(p => p.status !== 'completed').length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const todayDeadlines = prazos.filter(p => p.data === today && p.status !== 'concluido').length;
+                
+                document.getElementById('activeClientsCount').textContent = activeClients;
+                document.getElementById('activeProjectsCount').textContent = activeProjects;
+                document.getElementById('todayDeadlinesCount').textContent = todayDeadlines;
+                
+                // Carregar tabela de clientes
+                await loadClientsTable();
+                
+                // Carregar tabela de projetos
+                await loadProjectsTable();
+                
+                // Carregar alertas do admin
+                await loadAdminAlerts();
+                
+                // Carregar links do admin
+                await loadAdminLinks();
+                
+                // Carregar orientações do admin
+                await loadAdminOrientations();
+            }
+            
+            // Funções para carregar dados específicos
+            async function loadClientAlerts() {
+                const alerts = await getAlertsByClientId(currentClient.id);
+                const container = document.getElementById('alertsContainer');
+                
+                if (alerts.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta no momento.</div>';
+                    return;
+                }
+                
+                container.innerHTML = alerts.map(alert => `
+                    <div class="alert ${getAlertClass(alert.tipo)}">
+                        <i class="${alert.icone || getAlertIcon(alert.tipo)}"></i>
+                        <div>
+                            <strong>${alert.titulo}</strong>
+                            <p>${alert.descricao}</p>
+                            <small>${formatDate(alert.data)}</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            async function loadClientDeadlines() {
+                const deadlines = await getDeadlinesByClientId(currentClient.id);
+                const container = document.getElementById('deadlinesContainer');
+                
+                if (deadlines.length === 0) {
+                    container.innerHTML = '<p>Nenhum prazo definido.</p>';
+                    return;
+                }
+                
+                container.innerHTML = deadlines.map(deadline => {
+                    const today = new Date();
+                    const deadlineDate = new Date(deadline.data);
+                    const diffTime = deadlineDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let statusClass = 'badge-info';
+                    let statusText = 'Futuro';
+                    
+                    if (deadline.status === 'concluido') {
+                        statusClass = 'badge-success';
+                        statusText = 'Concluído';
+                    } else if (diffDays < 0) {
+                        statusClass = 'badge-danger';
+                        statusText = 'Atrasado';
+                    } else if (diffDays <= 3) {
+                        statusClass = 'badge-warning';
+                        statusText = 'Próximo';
+                    }
+                    
+                    return `
+                        <div class="list-item">
+                            <div class="list-icon">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <strong>${deadline.titulo}</strong>
+                                <p>${deadline.descricao || ''}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <small>${formatDate(deadline.data)}</small>
+                                    <span class="badge ${statusClass}">${statusText}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            async function loadClientOrientations() {
+                const orientations = await getOrientationsByClientId(currentClient.id);
+                const container = document.getElementById('orientationsContainer');
+                
+                if (orientations.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhuma orientação disponível.</div>';
+                    return;
+                }
+                
+                container.innerHTML = orientations.map(orientation => `
+                    <div class="glass-card mb-20">
+                        <h3><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h3>
+                        <p>${orientation.descricao}</p>
+                        ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
+                        <small style="display: block; margin-top: 10px; color: var(--gray);">Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
+                    </div>
+                `).join('');
+            }
+            
+            async function loadClientLinks() {
+                const links = await getLinksByClientId(currentClient.id);
+                const container = document.getElementById('linksContainer');
+                
+                if (links.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum link disponível.</div>';
+                    return;
+                }
+                
+                container.innerHTML = links.map(link => `
+                    <a href="${link.url}" target="_blank" class="link-card">
+                        <div class="link-icon">
+                            <i class="${link.icone || 'fas fa-link'}"></i>
+                        </div>
+                        <div class="link-info">
+                            <h3>${link.titulo}</h3>
+                            <p>${link.descricao || ''}</p>
+                        </div>
+                    </a>
+                `).join('');
+            }
+            
+            async function loadClientFiles() {
+                const files = await getFilesByClientId(currentClient.id);
+                const container = document.getElementById('filesContainer');
+                
+                if (files.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum arquivo disponível para download.</div>';
+                    return;
+                }
+                
+                container.innerHTML = files.map(file => `
+                    <div class="list-item">
+                        <div class="list-icon">
+                            <i class="fas fa-file-${getFileIcon(file.tipo)}"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong>${file.nome}</strong>
+                            <p>${file.descricao || ''}</p>
+                            <small>Tamanho: ${formatFileSize(file.tamanho)} • Tipo: ${file.tipo}</small>
+                        </div>
+                        <button class="btn btn-outline" onclick="downloadFile('${file.url}', '${file.nome}')">
+                            <i class="fas fa-download"></i> Baixar
+                        </button>
+                    </div>
+                `).join('');
+            }
+            
+            async function loadClientTimeline() {
+                const container = document.getElementById('timelineContainer');
+                
+                // Combinar eventos de diferentes fontes
+                const alerts = await getAlertsByClientId(currentClient.id);
+                const deadlines = await getDeadlinesByClientId(currentClient.id);
+                const projeto = currentClient.projetoId ? await getProjectById(currentClient.projetoId) : null;
+                
+                const timelineEvents = [];
+                
+                // Adicionar alertas
+                alerts.forEach(alert => {
+                    timelineEvents.push({
+                        type: 'alert',
+                        date: alert.data,
+                        title: alert.titulo,
+                        description: alert.descricao,
+                        icon: alert.icone || getAlertIcon(alert.tipo)
+                    });
+                });
+                
+                // Adicionar prazos
+                deadlines.forEach(deadline => {
+                    timelineEvents.push({
+                        type: 'deadline',
+                        date: deadline.data,
+                        title: deadline.titulo,
+                        description: deadline.descricao,
+                        icon: 'fas fa-calendar-day'
+                    });
+                });
+                
+                // Adicionar etapas do projeto
+                if (projeto && projeto.etapas) {
+                    projeto.etapas.forEach((etapa, index) => {
+                        timelineEvents.push({
+                            type: 'stage',
+                            date: projeto.dataInicio, // Ajustar conforme necessário
+                            title: `Etapa ${index + 1}: ${etapa}`,
+                            description: `Progresso do projeto: ${projeto.nome}`,
+                            icon: 'fas fa-flag-checkered'
+                        });
+                    });
+                }
+                
+                // Ordenar por data
+                timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                if (timelineEvents.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum evento na linha do tempo.</div>';
+                    return;
+                }
+                
+                container.innerHTML = timelineEvents.map(event => `
+                    <div class="list-item">
+                        <div class="list-icon" style="background: ${getEventColor(event.type)};">
+                            <i class="${event.icon}"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong>${event.title}</strong>
+                            <p>${event.description || ''}</p>
+                            <small>${formatDate(event.date)} • ${getEventTypeName(event.type)}</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            async function loadClientsTable() {
+                const clients = await getAllClients();
+                const projetos = await getAllProjects();
+                const container = document.getElementById('clientsTableBody');
+                
+                container.innerHTML = clients.map(client => {
+                    const projeto = projetos.find(p => p.id === client.projetoId);
+                    const lastAccess = client.ultimoAcesso ? formatDate(client.ultimoAcesso) : 'Nunca acessou';
+                    
+                    return `
+                        <tr>
+                            <td>${client.nome}</td>
+                            <td>${formatCpf(client.cpf)}</td>
+                            <td>
+                                <span class="status-indicator">
+                                    <span class="status-dot ${client.status}"></span>
+                                    ${client.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </span>
+                            </td>
+                            <td>${projeto ? projeto.nome : 'Nenhum'}</td>
+                            <td>${lastAccess}</td>
+                            <td>
+                                <button class="btn btn-outline" onclick="editClient(${client.id})" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline" onclick="toggleClientStatus(${client.id}, '${client.status}')" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-${client.status === 'active' ? 'ban' : 'check'}"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            
+            async function loadProjectsTable() {
+                const projects = await getAllProjects();
+                const clients = await getAllClients();
+                const container = document.getElementById('projectsTableBody');
+                
+                container.innerHTML = projects.map(project => {
+                    const client = clients.find(c => c.id === project.clienteId);
+                    const statusText = {
+                        'planning': 'Planejamento',
+                        'in_progress': 'Em Andamento',
+                        'review': 'Em Revisão',
+                        'completed': 'Concluído'
+                    };
+                    
+                    return `
+                        <tr>
+                            <td>${project.nome}</td>
+                            <td>${client ? client.nome : 'Cliente não encontrado'}</td>
+                            <td>
+                                <div class="progress-bar" style="height: 6px; margin-bottom: 5px;">
+                                    <div class="progress-fill" style="width: ${project.progresso}%"></div>
+                                </div>
+                                <small>${project.progresso}%</small>
+                            </td>
+                            <td>
+                                <span class="badge ${getProjectStatusBadge(project.status)}">
+                                    ${statusText[project.status] || project.status}
+                                </span>
+                            </td>
+                            <td>${project.prazoFinal ? formatDate(project.prazoFinal) : 'Não definido'}</td>
+                            <td>
+                                <button class="btn btn-outline" onclick="editProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline" onclick="deleteProject(${project.id})" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            
+            async function loadAdminAlerts() {
+                const alerts = await getAllAlerts();
+                const container = document.getElementById('adminAlertsContainer');
+                
+                if (alerts.length === 0) {
+                    container.innerHTML = '<div class="alert"><i class="fas fa-info-circle"></i> Nenhum alerta criado.</div>';
+                    return;
+                }
+                
+                container.innerHTML = alerts.map(alert => {
+                    const client = alert.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                    
+                    return `
+                        <div class="glass-card mb-20">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <h4><i class="${alert.icone || getAlertIcon(alert.tipo)}"></i> ${alert.titulo}</h4>
+                                    <p>${alert.descricao}</p>
+                                    <small>Para: ${client} • Criado em: ${formatDate(alert.criadoEm)}</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline" onclick="editContent(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline" onclick="toggleContentStatus(${alert.id}, 'alert')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-${alert.status === 'active' ? 'ban' : 'check'}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            async function loadAdminLinks() {
+                const links = await getAllLinks();
+                const container = document.getElementById('adminLinksContainer');
+                
+                if (links.length === 0) {
+                    container.innerHTML = '<p>Nenhum link criado.</p>';
+                    return;
+                }
+                
+                container.innerHTML = links.map(link => {
+                    const client = link.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                    
+                    return `
+                        <div class="list-item">
+                            <div class="list-icon">
+                                <i class="${link.icone || 'fas fa-link'}"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <strong>${link.titulo}</strong>
+                                <p>${link.descricao || ''}</p>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <small>${client} • URL: ${link.url.substring(0, 50)}...</small>
+                                    <span class="badge ${link.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                                        ${link.status === 'active' ? 'Ativo' : 'Inativo'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-outline" onclick="editContent(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline" onclick="toggleContentStatus(${link.id}, 'link')" style="padding: 6px 12px; font-size: 14px;">
+                                    <i class="fas fa-${link.status === 'active' ? 'ban' : 'check'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            async function loadAdminOrientations() {
+                const orientations = await getAllOrientations();
+                const container = document.getElementById('adminOrientationsContainer');
+                
+                if (orientations.length === 0) {
+                    container.innerHTML = '<p>Nenhuma orientação criada.</p>';
+                    return;
+                }
+                
+                container.innerHTML = orientations.map(orientation => {
+                    const client = orientation.clienteId ? 'Cliente específico' : 'Todos os clientes';
+                    
+                    return `
+                        <div class="glass-card mb-20">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <h4><i class="${orientation.icone || 'fas fa-info-circle'}"></i> ${orientation.titulo}</h4>
+                                    <p>${orientation.descricao}</p>
+                                    ${orientation.conteudo ? `<div style="margin-top: 10px;">${orientation.conteudo}</div>` : ''}
+                                    <small>Para: ${client} • Atualizado em: ${formatDate(orientation.atualizadoEm)}</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline" onclick="editContent(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline" onclick="toggleContentStatus(${orientation.id}, 'orientation')" style="padding: 6px 12px; font-size: 14px;">
+                                        <i class="fas fa-${orientation.status === 'active' ? 'ban' : 'check'}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Funções dos modais
+            async function openClientModal(clientId = null) {
+                const modal = document.getElementById('clientModal');
+                const title = document.getElementById('clientModalTitle');
+                const form = document.getElementById('clientForm');
+                
+                // Limpar formulário
+                form.reset();
+                
+                // Carregar projetos para o select
+                const projects = await getAllProjects();
+                const projectSelect = document.getElementById('modalClientProject');
+                projectSelect.innerHTML = '<option value="">Nenhum</option>' + 
+                    projects.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                
+                if (clientId) {
+                    // Modo edição
+                    title.textContent = 'Editar Cliente';
+                    const client = await getClientById(clientId);
+                    
+                    if (client) {
+                        document.getElementById('modalClientId').value = client.id;
+                        document.getElementById('modalClientName').value = client.nome;
+                        document.getElementById('modalClientCpf').value = client.cpf;
+                        document.getElementById('modalClientEmail').value = client.email;
+                        document.getElementById('modalClientPassword').value = client.senha;
+                        document.getElementById('modalClientStatus').value = client.status;
+                        document.getElementById('modalClientProject').value = client.projetoId || '';
+                    }
+                } else {
+                    // Modo adição
+                    title.textContent = 'Adicionar Cliente';
+                    document.getElementById('modalClientId').value = '';
+                    document.getElementById('modalClientPassword').value = generatePassword();
+                }
+                
+                modal.classList.add('active');
+            }
+            
+            async function openProjectModal(projectId = null) {
+                const modal = document.getElementById('projectModal');
+                const title = document.getElementById('projectModalTitle');
+                const form = document.getElementById('projectForm');
+                
+                // Limpar formulário
+                form.reset();
+                
+                // Carregar clientes para o select
+                const clients = await getAllClients();
+                const clientSelect = document.getElementById('modalProjectClient');
+                clientSelect.innerHTML = '<option value="">Selecione um cliente</option>' + 
+                    clients.map(c => `<option value="${c.id}">${c.nome} (${formatCpf(c.cpf)})</option>`).join('');
+                
+                if (projectId) {
+                    // Modo edição
+                    title.textContent = 'Editar Projeto';
+                    const project = await getProjectById(projectId);
+                    
+                    if (project) {
+                        document.getElementById('modalProjectId').value = project.id;
+                        document.getElementById('modalProjectName').value = project.nome;
+                        document.getElementById('modalProjectClient').value = project.clienteId;
+                        document.getElementById('modalProjectDescription').value = project.descricao || '';
+                        document.getElementById('modalProjectProgress').value = project.progresso;
+                        document.getElementById('modalProjectProgressValue').textContent = project.progresso + '%';
+                        document.getElementById('modalProjectStatus').value = project.status;
+                        document.getElementById('modalProjectDeadline').value = project.prazoFinal || '';
+                        document.getElementById('modalProjectStages').value = project.etapas ? project.etapas.join('\n') : '';
+                    }
+                } else {
+                    // Modo adição
+                    title.textContent = 'Adicionar Projeto';
+                    document.getElementById('modalProjectId').value = '';
+                    document.getElementById('modalProjectProgressValue').textContent = '0%';
+                }
+                
+                modal.classList.add('active');
+            }
+            
+            async function openContentModal(contentType = 'link', contentId = null) {
+                const modal = document.getElementById('contentModal');
+                const title = document.getElementById('contentModalTitle');
+                const form = document.getElementById('contentForm');
+                const typeSelect = document.getElementById('modalContentType');
+                
+                // Limpar formulário
+                form.reset();
+                
+                // Definir tipo de conteúdo
+                typeSelect.value = contentType;
+                updateContentModalFields();
+                
+                // Carregar clientes para o select
+                const clients = await getAllClients();
+                const clientSelect = document.getElementById('modalContentClient');
+                clientSelect.innerHTML = '<option value="">Todos os Clientes</option>' + 
+                    clients.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                
+                if (contentId) {
+                    // Modo edição
+                    title.textContent = 'Editar Conteúdo';
+                    
+                    let content;
+                    switch(contentType) {
+                        case 'link':
+                            content = await getLinkById(contentId);
+                            break;
+                        case 'orientation':
+                            content = await getOrientationById(contentId);
+                            break;
+                        case 'alert':
+                            content = await getAlertById(contentId);
+                            break;
+                        case 'file':
+                            content = await getFileById(contentId);
+                            break;
+                    }
+                    
+                    if (content) {
+                        document.getElementById('modalContentId').value = content.id;
+                        document.getElementById('modalContentTitle').value = content.titulo;
+                        document.getElementById('modalContentDescription').value = content.descricao || '';
+                        document.getElementById('modalContentUrl').value = content.url || '';
+                        document.getElementById('modalContentIcon').value = content.icone || '';
+                        document.getElementById('modalContentClient').value = content.clienteId || '';
+                        document.getElementById('modalContentStatus').value = content.status || 'active';
+                    }
+                } else {
+                    // Modo adição
+                    title.textContent = 'Adicionar Conteúdo';
+                    document.getElementById('modalContentId').value = '';
+                    
+                    // Definir ícone padrão baseado no tipo
+                    const defaultIcons = {
+                        'link': 'fas fa-link',
+                        'orientation': 'fas fa-info-circle',
+                        'alert': 'fas fa-bell',
+                        'file': 'fas fa-file'
+                    };
+                    
+                    document.getElementById('modalContentIcon').value = defaultIcons[contentType] || 'fas fa-question-circle';
+                }
+                
+                modal.classList.add('active');
+            }
+            
+            function updateContentModalFields() {
+                const type = document.getElementById('modalContentType').value;
+                const urlGroup = document.getElementById('modalContentUrlGroup');
+                const iconGroup = document.getElementById('modalContentIconGroup');
+                
+                // Mostrar/ocultar campos baseado no tipo
+                if (type === 'file') {
+                    urlGroup.style.display = 'block';
+                    document.getElementById('modalContentUrl').placeholder = 'URL do arquivo ou caminho';
+                    iconGroup.style.display = 'block';
+                } else if (type === 'link') {
+                    urlGroup.style.display = 'block';
+                    document.getElementById('modalContentUrl').placeholder = 'URL do link';
+                    iconGroup.style.display = 'block';
+                } else {
+                    urlGroup.style.display = 'none';
+                    iconGroup.style.display = type === 'alert' ? 'block' : 'block';
+                }
+            }
+            
+            function closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+            
+            // Funções dos formulários modais
+            async function handleClientFormSubmit(e) {
+                e.preventDefault();
+                
+                const clientData = {
+                    nome: document.getElementById('modalClientName').value,
+                    cpf: document.getElementById('modalClientCpf').value,
+                    email: document.getElementById('modalClientEmail').value,
+                    senha: document.getElementById('modalClientPassword').value,
+                    status: document.getElementById('modalClientStatus').value,
+                    projetoId: document.getElementById('modalClientProject').value || null,
+                    criadoEm: new Date().toISOString()
+                };
+                
+                const clientId = document.getElementById('modalClientId').value;
+                
+                try {
+                    if (clientId) {
+                        // Atualizar cliente existente
+                        const existingClient = await getClientById(parseInt(clientId));
+                        if (existingClient) {
+                            clientData.id = parseInt(clientId);
+                            clientData.criadoEm = existingClient.criadoEm;
+                            await updateClient(clientData);
+                            showMessage('Cliente atualizado com sucesso!', 'success');
+                        }
+                    } else {
+                        // Adicionar novo cliente
+                        await addClient(clientData);
+                        showMessage('Cliente adicionado com sucesso!', 'success');
+                    }
+                    
+                    closeModal('clientModal');
+                    await loadAdminData();
+                    
+                    // Se estamos na área do cliente e é o próprio cliente, recarregar dados
+                    if (!isAdmin && currentClient && currentClient.id === parseInt(clientId)) {
+                        currentClient = await getClientById(parseInt(clientId));
+                        loadClientData();
+                    }
+                    
+                } catch (error) {
+                    showMessage(`Erro: ${error.message}`, 'danger');
+                }
+            }
+            
+            async function handleProjectFormSubmit(e) {
+                e.preventDefault();
+                
+                const stagesText = document.getElementById('modalProjectStages').value;
+                const stages = stagesText.split('\n').filter(stage => stage.trim() !== '');
+                
+                const projectData = {
+                    nome: document.getElementById('modalProjectName').value,
+                    clienteId: parseInt(document.getElementById('modalProjectClient').value),
+                    descricao: document.getElementById('modalProjectDescription').value,
+                    progresso: parseInt(document.getElementById('modalProjectProgress').value),
+                    status: document.getElementById('modalProjectStatus').value,
+                    prazoFinal: document.getElementById('modalProjectDeadline').value || null,
+                    etapas: stages,
+                    dataInicio: new Date().toISOString()
+                };
+                
+                const projectId = document.getElementById('modalProjectId').value;
+                
+                try {
+                    if (projectId) {
+                        // Atualizar projeto existente
+                        const existingProject = await getProjectById(parseInt(projectId));
+                        if (existingProject) {
+                            projectData.id = parseInt(projectId);
+                            projectData.dataInicio = existingProject.dataInicio;
+                            await updateProject(projectData);
+                            showMessage('Projeto atualizado com sucesso!', 'success');
+                        }
+                    } else {
+                        // Adicionar novo projeto
+                        await addProject(projectData);
+                        showMessage('Projeto adicionado com sucesso!', 'success');
+                    }
+                    
+                    closeModal('projectModal');
+                    await loadAdminData();
+                    
+                } catch (error) {
+                    showMessage(`Erro: ${error.message}`, 'danger');
+                }
+            }
+            
+            async function handleContentFormSubmit(e) {
+                e.preventDefault();
+                
+                const type = document.getElementById('modalContentType').value;
+                const contentId = document.getElementById('modalContentId').value;
+                
+                const contentData = {
+                    titulo: document.getElementById('modalContentTitle').value,
+                    descricao: document.getElementById('modalContentDescription').value,
+                    icone: document.getElementById('modalContentIcon').value,
+                    clienteId: document.getElementById('modalContentClient').value || null,
+                    status: document.getElementById('modalContentStatus').value,
+                    criadoEm: new Date().toISOString(),
+                    atualizadoEm: new Date().toISOString()
+                };
+                
+                // Adicionar campos específicos por tipo
+                if (type === 'link' || type === 'file') {
+                    contentData.url = document.getElementById('modalContentUrl').value;
+                }
+                
+                if (type === 'alert') {
+                    contentData.tipo = 'info'; // Tipo padrão
+                    contentData.data = new Date().toISOString();
+                }
+                
+                if (type === 'file') {
+                    contentData.nome = contentData.titulo;
+                    contentData.tipo = 'pdf'; // Tipo padrão
+                    contentData.tamanho = 0; // Tamanho padrão
+                }
+                
+                try {
+                    let result;
+                    
+                    if (contentId) {
+                        // Atualizar conteúdo existente
+                        contentData.id = parseInt(contentId);
+                        
+                        switch(type) {
+                            case 'link':
+                                result = await updateLink(contentData);
+                                break;
+                            case 'orientation':
+                                result = await updateOrientation(contentData);
+                                break;
+                            case 'alert':
+                                result = await updateAlert(contentData);
+                                break;
+                            case 'file':
+                                result = await updateFile(contentData);
+                                break;
+                        }
+                        
+                        showMessage('Conteúdo atualizado com sucesso!', 'success');
+                    } else {
+                        // Adicionar novo conteúdo
+                        switch(type) {
+                            case 'link':
+                                result = await addLink(contentData);
+                                break;
+                            case 'orientation':
+                                result = await addOrientation(contentData);
+                                break;
+                            case 'alert':
+                                result = await addAlert(contentData);
+                                break;
+                            case 'file':
+                                result = await addFile(contentData);
+                                break;
+                        }
+                        
+                        showMessage('Conteúdo adicionado com sucesso!', 'success');
+                    }
+                    
+                    closeModal('contentModal');
+                    await loadAdminData();
+                    
+                    // Se estamos na área do cliente, recarregar dados
+                    if (!isAdmin && currentClient) {
+                        loadClientData();
+                    }
+                    
+                } catch (error) {
+                    showMessage(`Erro: ${error.message}`, 'danger');
+                }
+            }
+            
+            // Funções de utilidade
+            function switchClientTab(e) {
+                const tab = e.target.getAttribute('data-tab');
+                
+                // Ativar tab
+                document.querySelectorAll('#clientTabs .tab').forEach(t => {
+                    t.classList.remove('active');
+                });
+                e.target.classList.add('active');
+                
+                // Mostrar conteúdo da tab
+                document.querySelectorAll('#clientArea .tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tab).classList.add('active');
+            }
+            
+            function switchAdminTab(e) {
+                const tab = e.target.getAttribute('data-tab');
+                
+                // Ativar tab
+                document.querySelectorAll('#adminTabs .tab').forEach(t => {
+                    t.classList.remove('active');
+                });
+                e.target.classList.add('active');
+                
+                // Mostrar conteúdo da tab
+                document.querySelectorAll('#adminArea .tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tab).classList.add('active');
+            }
+            
+            function showLoginMessage(message, type) {
+                const messageDiv = document.getElementById('loginMessage');
+                messageDiv.textContent = message;
+                messageDiv.className = `alert alert-${type}`;
+                messageDiv.classList.remove('hidden');
+            }
+            
+            function showMessage(message, type) {
+                // Criar um elemento de mensagem temporário
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `glass-card alert-${type}`;
+                messageDiv.style.position = 'fixed';
+                messageDiv.style.top = '20px';
+                messageDiv.style.right = '20px';
+                messageDiv.style.zIndex = '1000';
+                messageDiv.style.maxWidth = '300px';
+                messageDiv.style.padding = '15px';
+                messageDiv.textContent = message;
+                
+                document.body.appendChild(messageDiv);
+                
+                // Remover após 5 segundos
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 5000);
+            }
+            
+            function resetLoginForms() {
+                document.getElementById('clientLoginForm').reset();
+                document.getElementById('adminLoginForm').reset();
+                document.getElementById('loginMessage').classList.add('hidden');
+            }
+            
+            function formatCpf(cpf) {
+                if (!cpf) return '';
+                return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+            
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('pt-BR');
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            function getInitials(name) {
+                return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            }
+            
+            function getAlertClass(type) {
+                const classes = {
+                    'info': '',
+                    'warning': 'alert-warning',
+                    'success': 'alert-success',
+                    'danger': 'alert-danger'
+                };
+                return classes[type] || '';
+            }
+            
+            function getAlertIcon(type) {
+                const icons = {
+                    'info': 'fas fa-info-circle',
+                    'warning': 'fas fa-exclamation-triangle',
+                    'success': 'fas fa-check-circle',
+                    'danger': 'fas fa-times-circle'
+                };
+                return icons[type] || 'fas fa-bell';
+            }
+            
+            function getFileIcon(fileType) {
+                const icons = {
+                    'pdf': 'pdf',
+                    'doc': 'word',
+                    'docx': 'word',
+                    'xls': 'excel',
+                    'xlsx': 'excel',
+                    'ppt': 'powerpoint',
+                    'pptx': 'powerpoint',
+                    'zip': 'archive',
+                    'rar': 'archive',
+                    'jpg': 'image',
+                    'jpeg': 'image',
+                    'png': 'image',
+                    'txt': 'alt'
+                };
+                return icons[fileType.toLowerCase()] || 'alt';
+            }
+            
+            function getEventColor(type) {
+                const colors = {
+                    'alert': 'rgba(255, 170, 0, 0.2)',
+                    'deadline': 'rgba(0, 217, 255, 0.2)',
+                    'stage': 'rgba(157, 78, 221, 0.2)'
+                };
+                return colors[type] || 'rgba(100, 100, 150, 0.2)';
+            }
+            
+            function getEventTypeName(type) {
+                const names = {
+                    'alert': 'Alerta',
+                    'deadline': 'Prazo',
+                    'stage': 'Etapa'
+                };
+                return names[type] || 'Evento';
+            }
+            
+            function getProjectStatusBadge(status) {
+                const badges = {
+                    'planning': 'badge-info',
+                    'in_progress': 'badge-success',
+                    'review': 'badge-warning',
+                    'completed': 'badge-secondary'
+                };
+                return badges[status] || 'badge-info';
+            }
+            
+            function generatePassword() {
+                return Math.random().toString(36).slice(-8);
+            }
+            
+            // Funções do IndexedDB
+            // Admin
+            async function addAdmin(admin) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ADMIN], 'readwrite');
+                    const store = transaction.objectStore(STORES.ADMIN);
+                    const request = store.add(admin);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAdminByEmail(email) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ADMIN], 'readonly');
+                    const store = transaction.objectStore(STORES.ADMIN);
+                    const index = store.index('email');
+                    const request = index.get(email);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Clientes
+            async function addClient(client) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.CLIENTES], 'readwrite');
+                    const store = transaction.objectStore(STORES.CLIENTES);
+                    const request = store.add(client);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateClient(client) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.CLIENTES], 'readwrite');
+                    const store = transaction.objectStore(STORES.CLIENTES);
+                    const request = store.put(client);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getClientById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
+                    const store = transaction.objectStore(STORES.CLIENTES);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getClientByCpf(cpf) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
+                    const store = transaction.objectStore(STORES.CLIENTES);
+                    const index = store.index('cpf');
+                    const request = index.get(cpf);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllClients() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.CLIENTES], 'readonly');
+                    const store = transaction.objectStore(STORES.CLIENTES);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Projetos
+            async function addProject(project) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PROJETOS], 'readwrite');
+                    const store = transaction.objectStore(STORES.PROJETOS);
+                    const request = store.add(project);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateProject(project) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PROJETOS], 'readwrite');
+                    const store = transaction.objectStore(STORES.PROJETOS);
+                    const request = store.put(project);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getProjectById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PROJETOS], 'readonly');
+                    const store = transaction.objectStore(STORES.PROJETOS);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllProjects() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PROJETOS], 'readonly');
+                    const store = transaction.objectStore(STORES.PROJETOS);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Links
+            async function addLink(link) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.LINKS], 'readwrite');
+                    const store = transaction.objectStore(STORES.LINKS);
+                    const request = store.add(link);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateLink(link) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.LINKS], 'readwrite');
+                    const store = transaction.objectStore(STORES.LINKS);
+                    const request = store.put(link);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getLinkById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.LINKS], 'readonly');
+                    const store = transaction.objectStore(STORES.LINKS);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getLinksByClientId(clientId) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.LINKS], 'readonly');
+                    const store = transaction.objectStore(STORES.LINKS);
+                    const index = store.index('clienteId');
+                    const request = index.getAll(clientId);
+                    
+                    request.onsuccess = () => {
+                        const allLinks = request.result;
+                        // Também incluir links para todos os clientes (clienteId null ou undefined)
+                        const allRequest = store.getAll();
+                        allRequest.onsuccess = () => {
+                            const globalLinks = allRequest.result.filter(link => !link.clienteId);
+                            resolve([...allLinks, ...globalLinks].filter(link => link.status === 'active'));
+                        };
+                        allRequest.onerror = () => reject(allRequest.error);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllLinks() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.LINKS], 'readonly');
+                    const store = transaction.objectStore(STORES.LINKS);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Orientações
+            async function addOrientation(orientation) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ORIENTACOES], 'readwrite');
+                    const store = transaction.objectStore(STORES.ORIENTACOES);
+                    const request = store.add(orientation);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateOrientation(orientation) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ORIENTACOES], 'readwrite');
+                    const store = transaction.objectStore(STORES.ORIENTACOES);
+                    const request = store.put(orientation);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getOrientationById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
+                    const store = transaction.objectStore(STORES.ORIENTACOES);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getOrientationsByClientId(clientId) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
+                    const store = transaction.objectStore(STORES.ORIENTACOES);
+                    const index = store.index('clienteId');
+                    const request = index.getAll(clientId);
+                    
+                    request.onsuccess = () => {
+                        const allOrientations = request.result;
+                        // Também incluir orientações para todos os clientes
+                        const allRequest = store.getAll();
+                        allRequest.onsuccess = () => {
+                            const globalOrientations = allRequest.result.filter(orientation => !orientation.clienteId);
+                            resolve([...allOrientations, ...globalOrientations].filter(orientation => orientation.status === 'active'));
+                        };
+                        allRequest.onerror = () => reject(allRequest.error);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllOrientations() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ORIENTACOES], 'readonly');
+                    const store = transaction.objectStore(STORES.ORIENTACOES);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Alertas
+            async function addAlert(alert) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ALERTAS], 'readwrite');
+                    const store = transaction.objectStore(STORES.ALERTAS);
+                    const request = store.add(alert);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateAlert(alert) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ALERTAS], 'readwrite');
+                    const store = transaction.objectStore(STORES.ALERTAS);
+                    const request = store.put(alert);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAlertById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
+                    const store = transaction.objectStore(STORES.ALERTAS);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAlertsByClientId(clientId) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
+                    const store = transaction.objectStore(STORES.ALERTAS);
+                    const index = store.index('clienteId');
+                    const request = index.getAll(clientId);
+                    
+                    request.onsuccess = () => {
+                        const allAlerts = request.result;
+                        // Também incluir alertas para todos os clientes
+                        const allRequest = store.getAll();
+                        allRequest.onsuccess = () => {
+                            const globalAlerts = allRequest.result.filter(alert => !alert.clienteId);
+                            resolve([...allAlerts, ...globalAlerts].filter(alert => alert.status === 'active'));
+                        };
+                        allRequest.onerror = () => reject(allRequest.error);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllAlerts() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ALERTAS], 'readonly');
+                    const store = transaction.objectStore(STORES.ALERTAS);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Prazos
+            async function getDeadlinesByClientId(clientId) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PRAZOS], 'readonly');
+                    const store = transaction.objectStore(STORES.PRAZOS);
+                    const index = store.index('clienteId');
+                    const request = index.getAll(clientId);
+                    
+                    request.onsuccess = () => resolve(request.result.filter(d => d.status !== 'concluido'));
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getAllDeadlines() {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.PRAZOS], 'readonly');
+                    const store = transaction.objectStore(STORES.PRAZOS);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Arquivos
+            async function addFile(file) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ARQUIVOS], 'readwrite');
+                    const store = transaction.objectStore(STORES.ARQUIVOS);
+                    const request = store.add(file);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function updateFile(file) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ARQUIVOS], 'readwrite');
+                    const store = transaction.objectStore(STORES.ARQUIVOS);
+                    const request = store.put(file);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getFileById(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ARQUIVOS], 'readonly');
+                    const store = transaction.objectStore(STORES.ARQUIVOS);
+                    const request = store.get(id);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async function getFilesByClientId(clientId) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORES.ARQUIVOS], 'readonly');
+                    const store = transaction.objectStore(STORES.ARQUIVOS);
+                    const index = store.index('clienteId');
+                    const request = index.getAll(clientId);
+                    
+                    request.onsuccess = () => {
+                        const allFiles = request.result;
+                        // Também incluir arquivos para todos os clientes
+                        const allRequest = store.getAll();
+                        allRequest.onsuccess = () => {
+                            const globalFiles = allRequest.result.filter(file => !file.clienteId);
+                            resolve([...allFiles, ...globalFiles].filter(file => file.status === 'active'));
+                        };
+                        allRequest.onerror = () => reject(allRequest.error);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Acessos
+            async function registerAccess(userId, userType) {
+                return new Promise((resolve, reject) => {
+                    const accessData = {
+                        userId,
+                        userType,
+                        timestamp: new Date().toISOString(),
+                        ip: 'local' // Em um ambiente real, isso seria capturado do servidor
+                    };
+                    
+                    const transaction = db.transaction([STORES.ACESSOS], 'readwrite');
+                    const store = transaction.objectStore(STORES.ACESSOS);
+                    const request = store.add(accessData);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            // Funções globais para uso nos botões
+            window.editClient = async function(clientId) {
+                await openClientModal(clientId);
+            };
+            
+            window.toggleClientStatus = async function(clientId, currentStatus) {
+                const client = await getClientById(clientId);
+                if (client) {
+                    client.status = currentStatus === 'active' ? 'inactive' : 'active';
+                    await updateClient(client);
+                    showMessage(`Cliente ${client.status === 'active' ? 'ativado' : 'desativado'} com sucesso!`, 'success');
+                    await loadAdminData();
+                }
+            };
+            
+            window.editProject = async function(projectId) {
+                await openProjectModal(projectId);
+            };
+            
+            window.deleteProject = async function(projectId) {
+                if (confirm('Tem certeza que deseja excluir este projeto?')) {
+                    // Em um sistema real, aqui removeríamos do banco de dados
+                    // Por enquanto, apenas mostra uma mensagem
+                    showMessage('Projeto excluído com sucesso!', 'success');
+                    await loadAdminData();
+                }
+            };
+            
+            window.editContent = async function(contentId, contentType) {
+                await openContentModal(contentType, contentId);
+            };
+            
+            window.toggleContentStatus = async function(contentId, contentType) {
+                let content;
+                switch(contentType) {
+                    case 'link':
+                        content = await getLinkById(contentId);
+                        if (content) {
+                            content.status = content.status === 'active' ? 'inactive' : 'active';
+                            await updateLink(content);
+                        }
+                        break;
+                    case 'orientation':
+                        content = await getOrientationById(contentId);
+                        if (content) {
+                            content.status = content.status === 'active' ? 'inactive' : 'active';
+                            await updateOrientation(content);
+                        }
+                        break;
+                    case 'alert':
+                        content = await getAlertById(contentId);
+                        if (content) {
+                            content.status = content.status === 'active' ? 'inactive' : 'active';
+                            await updateAlert(content);
+                        }
+                        break;
+                }
+                
+                if (content) {
+                    showMessage(`Conteúdo ${content.status === 'active' ? 'ativado' : 'desativado'} com sucesso!`, 'success');
+                    await loadAdminData();
+                    
+                    // Se estamos na área do cliente, recarregar dados
+                    if (!isAdmin && currentClient) {
+                        loadClientData();
+                    }
+                }
+            };
+            
+            window.downloadFile = function(url, filename) {
+                // Em um sistema real, isso faria o download do arquivo
+                // Por enquanto, apenas abre em uma nova aba
+                window.open(url, '_blank');
+                showMessage(`Iniciando download de ${filename}`, 'success');
+            };
+            
+            // Dados iniciais de exemplo (após o login do admin, eles podem ser criados)
+            // NÃO criamos dados de teste automaticamente, apenas o admin pode criar
+        });
+    </script>
+</body>
+</html>
