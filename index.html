@@ -1219,27 +1219,7 @@
                 });
             }
             
-            // Configurar administrador padrão (mantido para compatibilidade)
-            async function setupDefaultAdmin() {
-                try {
-                    const adminExists = await getAdminByEmail('rc@rc.com');
-                    
-                    if (!adminExists) {
-                        const defaultAdmin = {
-                            email: 'rc@rc.com',
-                            senha: '12',
-                            nome: 'Administrador RC',
-                            criadoEm: new Date().toISOString()
-                        };
-                        
-                        await addAdmin(defaultAdmin);
-                        console.log('Administrador padrão criado no portallegacy');
-                    }
-                } catch (error) {
-                    console.error('Erro ao configurar admin padrão:', error);
-                }
-            }
-            
+        
             // Configurar ouvintes de eventos
             function setupEventListeners() {
                 // Login
