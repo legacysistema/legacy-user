@@ -3217,26 +3217,31 @@
     </script>
 <script>
 /**
- * 🚀 UNIVERSAL IDB SYNC – TRANSACTION SAFE (FINAL FIXED)
- * ✔ KeyPath-safe download
- * ✔ Zero quebra de schema
- * ✔ Nenhuma funcionalidade alterada
+ * 🚀 UNIVERSAL IDB SYNC – STABLE FINAL VERSION
+ * ✔ Device persistente
+ * ✔ Anti-loop por assinatura (cache)
+ * ✔ Realtime resiliente
+ * ✔ Upload + Download contínuos
+ * ✔ Seguro com RLS
  */
 (function () {
+
+    /* ================= CONFIG ================= */
 
     const SYNC_TABLE = 'lg_user_sync';
     const CANONICAL_DB = 'portallegacy';
 
-    let storedId = sessionStorage.getItem('sync_device_id');
+    /* ================= DEVICE ================= */
+
+    let storedId = localStorage.getItem('sync_device_id');
     if (!storedId) {
         storedId = crypto.randomUUID();
-        sessionStorage.setItem('sync_device_id', storedId);
+        localStorage.setItem('sync_device_id', storedId);
     }
     const DEVICE_ID = storedId;
 
     let isReplicating = false;
     let syncInterval = null;
-    let firstDownload = true;
     const syncCache = new Map();
 
     /* ================= SUPABASE ================= */
@@ -3247,12 +3252,15 @@
     };
 
     const waitForSupabase = () => new Promise(resolve => {
-        const check = () => getClient() ? resolve(getClient()) : setTimeout(check, 100);
+        const check = () => getClient()
+            ? resolve(getClient())
+            : setTimeout(check, 100);
         check();
     });
 
     async function getUserId() {
-        const client = await waitForSupabase();
+        const client = getClient();
+        if (!client) return null;
         const { data } = await client.auth.getSession();
         return data?.session?.user?.id || null;
     }
@@ -3270,25 +3278,39 @@
         if (!client || !userId) return;
 
         const cacheKey = `${storeName}-${key}`;
-        method === 'delete'
-            ? syncCache.delete(cacheKey)
-            : syncCache.set(cacheKey, generateSignature(value));
+        const sig = generateSignature(value);
 
-        client.from(SYNC_TABLE).upsert({
-            user_id: userId,
-            db_name: CANONICAL_DB,
-            store_name: storeName,
-            record_key: String(key),
-            record_value: method === 'delete' ? null : value,
-            is_deleted: method === 'delete',
-            device_id: DEVICE_ID,
-            updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'user_id,db_name,store_name,record_key'
-        });
+        if (method !== 'delete' && syncCache.get(cacheKey) === sig) return;
+
+        if (method === 'delete') {
+            syncCache.delete(cacheKey);
+        } else {
+            syncCache.set(cacheKey, sig);
+        }
+
+        const { error } = await client
+            .from(SYNC_TABLE)
+            .upsert({
+                user_id: userId,
+                db_name: CANONICAL_DB,
+                store_name: storeName,
+                record_key: String(key),
+                record_value: method === 'delete' ? null : value,
+                is_deleted: method === 'delete',
+                device_id: DEVICE_ID,
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id,db_name,store_name,record_key'
+            });
+
+        if (error) {
+            console.error('❌ Supabase Sync Error:', error);
+        } else {
+            console.log('⬆️ UPLOAD', storeName, key);
+        }
     }
 
-    /* ================= TRANSACTION SAFE PATCH ================= */
+    /* ================= TRANSACTION PATCH ================= */
 
     const originalObjectStore = IDBTransaction.prototype.objectStore;
 
@@ -3302,12 +3324,8 @@
             store[method] = function (value, key) {
                 const req = original.apply(this, arguments);
                 req.onsuccess = e => {
-                    scheduleRealtimeUpload(
-                        name,
-                        method,
-                        key || e.target.result,
-                        value
-                    );
+                    const finalKey = key ?? e.target.result;
+                    scheduleRealtimeUpload(name, method, finalKey, value);
                 };
                 return req;
             };
@@ -3319,20 +3337,20 @@
 
     console.log('🪤 Sync Híbrido Ativado');
 
-    /* ================= DOWNLOAD LOOP (FIXED) ================= */
+    /* ================= DOWNLOAD ================= */
 
     async function smartDownloadLoop() {
-        const userId = await getUserId();
         const client = getClient();
-        if (!userId || !client) return;
+        const userId = await getUserId();
+        if (!client || !userId) return;
 
-        const { data } = await client
+        const { data, error } = await client
             .from(SYNC_TABLE)
             .select('*')
             .eq('user_id', userId)
             .eq('db_name', CANONICAL_DB);
 
-        if (!data?.length) return;
+        if (error || !data?.length) return;
 
         const req = indexedDB.open(CANONICAL_DB);
         req.onsuccess = e => {
@@ -3347,46 +3365,52 @@
             isReplicating = true;
 
             data.forEach(r => {
-                if (!firstDownload && r.device_id === DEVICE_ID) return;
                 if (!db.objectStoreNames.contains(r.store_name)) return;
 
                 const store = tx.objectStore(r.store_name);
                 const keyPath = store.keyPath;
-                const key = isNaN(r.record_key) ? r.record_key : Number(r.record_key);
+                const key = isNaN(r.record_key)
+                    ? r.record_key
+                    : Number(r.record_key);
+
                 const cacheKey = `${r.store_name}-${r.record_key}`;
+                const sig = generateSignature(r.record_value);
+
+                if (syncCache.get(cacheKey) === sig) return;
 
                 if (r.is_deleted) {
                     store.delete(key);
                     syncCache.delete(cacheKey);
+                    console.log('⬇️ DELETE', r.store_name, key);
                     return;
                 }
 
-                // 🔥 FIX DEFINITIVO
                 if (keyPath) {
                     store.put(r.record_value);
                 } else {
                     store.put(r.record_value, key);
                 }
 
-                syncCache.set(cacheKey, generateSignature(r.record_value));
+                syncCache.set(cacheKey, sig);
+                console.log('⬇️ DOWNLOAD', r.store_name, key);
             });
 
             tx.oncomplete = () => {
                 isReplicating = false;
-                firstDownload = false;
-                console.log('📥 Download Sync aplicado');
             };
-            tx.onerror = () => isReplicating = false;
+            tx.onerror = () => {
+                isReplicating = false;
+            };
         };
     }
 
     /* ================= START ================= */
 
     async function startService() {
+        const client = await waitForSupabase();
         const userId = await getUserId();
         if (!userId) return;
 
-        const client = getClient();
         console.log('✅ Sync iniciado para:', userId);
 
         client.channel('global-sync-live')
@@ -3396,8 +3420,9 @@
                 table: SYNC_TABLE,
                 filter: `user_id=eq.${userId}`
             }, payload => {
-                if (payload.new?.device_id !== DEVICE_ID)
+                if (payload.new?.device_id !== DEVICE_ID) {
                     smartDownloadLoop();
+                }
             })
             .subscribe();
 
@@ -3406,9 +3431,7 @@
         setTimeout(smartDownloadLoop, 500);
 
         clearInterval(syncInterval);
-        syncInterval = setInterval(() => {
-            smartDownloadLoop();
-        }, 10000);
+        syncInterval = setInterval(smartDownloadLoop, 10000);
     }
 
     waitForSupabase().then(startService);
