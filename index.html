@@ -3264,6 +3264,7 @@
 
   async function scheduleRealtimeUpload(storeName, method, key, value) {
     if (window.__IDB_FROM_SYNC__) return;
+    if (key === undefined || key === null) return;
 
     const client = getClient();
     const userId = await getUserId();
@@ -3313,19 +3314,33 @@
 
       IDBObjectStore.prototype[method] = function (...args) {
         const storeName = this.name;
+        const store = this;
         const value = method === 'delete' || method === 'clear' ? null : args[0];
-        const key = method === 'clear' ? '*' : args[1];
+        const providedKey = args[1];
 
         const req = original.apply(this, args);
 
         req.addEventListener('success', e => {
           if (window.__IDB_FROM_SYNC__) return;
 
-          const finalKey =
-            key ??
-            (e.target?.result !== undefined
-              ? e.target.result
-              : value?.id);
+          let finalKey = null;
+
+          if (method === 'clear') {
+            finalKey = '*';
+          } else if (method === 'delete') {
+            finalKey = providedKey;
+          } else {
+            // put/add
+            if (store.keyPath) {
+              finalKey = value?.[store.keyPath];
+            } else {
+              finalKey =
+                providedKey ??
+                e.target?.result;
+            }
+          }
+
+          if (finalKey === undefined || finalKey === null) return;
 
           scheduleRealtimeUpload(storeName, method, finalKey, value);
         });
@@ -3387,7 +3402,6 @@
           return;
         }
 
-        // 🔥 RESPEITA keyPath
         if (keyPath) {
           store.put(r.record_value);
         } else {
