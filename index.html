@@ -3309,7 +3309,7 @@ indexedDB.open = function (...args) {
     );
   }
 
-  /* ================= PATCH REAL (AUTO-INCREMENT SAFE) ================= */
+  /* ================= PATCH INDEXEDDB ================= */
 
   (function patchTransaction() {
     const orig = IDBTransaction.prototype.objectStore;
@@ -3335,14 +3335,11 @@ indexedDB.open = function (...args) {
               value = args[0];
               key =
                 args[1] ??
-                e.target.result ??        // 🔥 AUTO-INCREMENT REAL
+                e.target.result ??
                 value?.[store.keyPath];
             }
 
-            if (key === undefined || key === null) {
-              console.warn('⏭️ Sync ignorado (key indefinida)', storeName);
-              return;
-            }
+            if (key === undefined || key === null) return;
 
             push(storeName, method, key, value);
           });
@@ -3354,7 +3351,7 @@ indexedDB.open = function (...args) {
       return store;
     };
 
-    console.log('🧲 IndexedDB TRANSACTION PATCH ativo (OK)');
+    console.log('🧲 IndexedDB PATCH ativo');
   })();
 
   /* ================= PULL ================= */
@@ -3386,6 +3383,8 @@ indexedDB.open = function (...args) {
 
       data.forEach(r => {
         const store = tx.objectStore(r.store_name);
+        const keyPath = store.keyPath;
+
         const key = isNaN(r.record_key)
           ? r.record_key
           : Number(r.record_key);
@@ -3399,9 +3398,18 @@ indexedDB.open = function (...args) {
           return;
         }
 
-        store.put(r.record_value);
-        syncCache.set(cacheKey, signatureOf(r.record_value));
-        console.log('⬇️ INSERT', r.store_name, key);
+        const value = structuredClone(r.record_value);
+
+        // 🔥 FIX CRÍTICO: reidrata a key
+        if (keyPath) {
+          value[keyPath] = key;
+          store.put(value);
+        } else {
+          store.put(value, key);
+        }
+
+        syncCache.set(cacheKey, signatureOf(value));
+        console.log('⬇️ INSERT/UPDATE', r.store_name, key);
       });
 
       tx.oncomplete = () => window.__IDB_FROM_SYNC__ = false;
@@ -3437,8 +3445,6 @@ indexedDB.open = function (...args) {
 
 })();
 </script>
-
-
 
 
 </body>
