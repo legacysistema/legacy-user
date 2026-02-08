@@ -1136,6 +1136,27 @@ indexedDB.open = function (...args) {
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlZHBxY3ludnFiZGJjY2ViaGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODc3MjgsImV4cCI6MjA4NTk2MzcyOH0.s8GOzp4woujGuDc4vK9QXIf3cWLMENUnJfE4lt_YhLg';
             const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             window.supabaseClient = supabase;
+
+          async function buscar() {
+  const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
+
+  const supabaseCpf = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+      global: {
+        headers: { cpf }
+      }
+    }
+  );
+
+  const { data, error } = await supabaseCpf
+    .from('user_public_feed')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  console.log(data);
+}
      
             // Inicialização do sistema
             initSystem();
@@ -3229,6 +3250,7 @@ indexedDB.open = function (...args) {
 (function () {
 
   const SYNC_TABLE = 'lg_user_sync';
+  const USER_TABLE = 'user_public_feed';
   const DB_NAME = 'portallegacy';
 
   /* ================= DEVICE ================= */
@@ -3248,16 +3270,6 @@ indexedDB.open = function (...args) {
   const getClient = () =>
     window.supabaseClient?.from ? window.supabaseClient : null;
 
-  const waitForSupabase = () =>
-    new Promise(r => {
-      const t = setInterval(() => {
-        if (getClient()) {
-          clearInterval(t);
-          r();
-        }
-      }, 100);
-    });
-
   async function getUserId() {
     const { data } = await window.supabaseClient.auth.getSession();
     return data?.session?.user?.id || null;
@@ -3266,11 +3278,10 @@ indexedDB.open = function (...args) {
   const signatureOf = v =>
     v === null || v === undefined ? 'null' : JSON.stringify(v);
 
-  /* ================= PUSH ================= */
+  /* ================= PUSH (ADMIN → SUPABASE) ================= */
 
   async function push(store, method, key, value) {
     if (window.__IDB_FROM_SYNC__) return;
-    if (key === undefined || key === null) return;
 
     const client = getClient();
     const userId = await getUserId();
@@ -3278,173 +3289,123 @@ indexedDB.open = function (...args) {
 
     const cacheKey = `${store}-${key}`;
 
-    if (method !== 'delete') {
-      const sig = signatureOf(value);
-      if (syncCache.get(cacheKey) === sig) return;
-      syncCache.set(cacheKey, sig);
-    } else {
+    /* ================= DELETE ================= */
+    if (method === 'delete') {
+      await client
+        .from(SYNC_TABLE)
+        .update({ is_deleted: true })
+        .eq('user_id', userId)
+        .eq('db_name', DB_NAME)
+        .eq('store_name', store)
+        .eq('record_key', String(key));
+
+      await client
+        .from(USER_TABLE)
+        .delete()
+        .eq('record_key', String(key))
+        .eq('type', store);
+
       syncCache.delete(cacheKey);
+      console.log('🗑️ DELETE ADMIN + USER', store, key);
+      return;
     }
 
-    const { error } = await client
+    if (!value || !value.cpf) return; // 🔒 CPF obrigatório
+
+    const sig = signatureOf(value);
+    if (syncCache.get(cacheKey) === sig) return;
+    syncCache.set(cacheKey, sig);
+
+    /* 🔧 TABELA TÉCNICA (ADMIN) */
+    const { error: adminErr } = await client
       .from(SYNC_TABLE)
       .upsert({
         user_id: userId,
         db_name: DB_NAME,
         store_name: store,
         record_key: String(key),
-        record_value: method === 'delete' ? null : value,
-        is_deleted: method === 'delete',
+        record_value: value,
+        is_deleted: false,
         device_id: DEVICE_ID,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,db_name,store_name,record_key'
       });
 
-    console.log(
-      error ? '❌ PUSH FAIL' : '⬆️ PUSH',
-      method,
-      store,
-      key
-    );
+    if (adminErr) {
+      console.error('❌ ADMIN SYNC FAIL', adminErr);
+      return;
+    }
+
+    /* 👁️ VISÃO DO USUÁRIO (PUBLICAÇÃO) */
+    const { error: userErr } = await client
+      .from(USER_TABLE)
+      .upsert({
+        cpf: value.cpf,
+        type: store,
+        record_key: String(key),
+        title: value.title || null,
+        description: value.description || null,
+        payload: value,
+        starts_at: value.starts_at || null,
+        ends_at: value.ends_at || null,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'cpf,type,record_key'
+      });
+
+    if (userErr) {
+      console.error('❌ USER FEED FAIL', userErr);
+      return;
+    }
+
+    console.log('⬆️ ADMIN + USER', store, key);
   }
 
   /* ================= PATCH INDEXEDDB ================= */
 
-  (function patchTransaction() {
-    const orig = IDBTransaction.prototype.objectStore;
+  const originalObjectStore = IDBTransaction.prototype.objectStore;
 
-    IDBTransaction.prototype.objectStore = function (storeName) {
-      const store = orig.call(this, storeName);
+  IDBTransaction.prototype.objectStore = function (storeName) {
+    const store = originalObjectStore.call(this, storeName);
 
-      ['put', 'add', 'delete'].forEach(method => {
-        const original = store[method];
+    ['put', 'add', 'delete'].forEach(method => {
+      const original = store[method];
 
-        store[method] = function (...args) {
-          const req = original.apply(this, args);
+      store[method] = function (...args) {
+        const req = original.apply(this, args);
 
-          req.addEventListener('success', e => {
-            if (window.__IDB_FROM_SYNC__) return;
+        req.addEventListener('success', e => {
+          let key, value = null;
 
-            let key;
-            let value = null;
+          if (method === 'delete') {
+            key = args[0];
+          } else {
+            value = args[0];
+            key = args[1] ?? e.target.result;
+          }
 
-            if (method === 'delete') {
-              key = args[0];
-            } else {
-              value = args[0];
-              key =
-                args[1] ??
-                e.target.result ??
-                value?.[store.keyPath];
-            }
+          push(storeName, method, key, value);
+        });
 
-            if (key === undefined || key === null) return;
+        return req;
+      };
+    });
 
-            push(storeName, method, key, value);
-          });
+    return store;
+  };
 
-          return req;
-        };
-      });
-
-      return store;
-    };
-
-    console.log('🧲 IndexedDB PATCH ativo');
-  })();
-
-  /* ================= PULL ================= */
-
-  async function pull() {
-    const client = getClient();
-    const userId = await getUserId();
-    if (!client || !userId) return;
-
-    const { data } = await client
-      .from(SYNC_TABLE)
-      .select('*')
-      .eq('user_id', userId)
-      .eq('db_name', DB_NAME);
-
-    if (!data?.length) return;
-
-    const req = indexedDB.open(DB_NAME);
-    req.onsuccess = e => {
-      const db = e.target.result;
-
-      const stores = [...new Set(data.map(d => d.store_name))]
-        .filter(s => db.objectStoreNames.contains(s));
-
-      if (!stores.length) return;
-
-      const tx = db.transaction(stores, 'readwrite');
-      window.__IDB_FROM_SYNC__ = true;
-
-      data.forEach(r => {
-        const store = tx.objectStore(r.store_name);
-        const keyPath = store.keyPath;
-
-        const key = isNaN(r.record_key)
-          ? r.record_key
-          : Number(r.record_key);
-
-        const cacheKey = `${r.store_name}-${r.record_key}`;
-
-        if (r.is_deleted) {
-          store.delete(key);
-          syncCache.delete(cacheKey);
-          console.log('⬇️ DELETE', r.store_name, key);
-          return;
-        }
-
-        const value = structuredClone(r.record_value);
-
-        // 🔥 FIX CRÍTICO: reidrata a key
-        if (keyPath) {
-          value[keyPath] = key;
-          store.put(value);
-        } else {
-          store.put(value, key);
-        }
-
-        syncCache.set(cacheKey, signatureOf(value));
-        console.log('⬇️ INSERT/UPDATE', r.store_name, key);
-      });
-
-      tx.oncomplete = () => window.__IDB_FROM_SYNC__ = false;
-      tx.onerror = () => window.__IDB_FROM_SYNC__ = false;
-    };
-  }
-
-  /* ================= START ================= */
-
-  waitForSupabase().then(async () => {
-    const userId = await getUserId();
-    if (!userId) return;
-
-    console.log('✅ Sync ativo para', userId);
-
-    window.supabaseClient
-      .channel('sync-live')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: SYNC_TABLE,
-        filter: `user_id=eq.${userId}`
-      }, payload => {
-        if (payload.new?.device_id !== DEVICE_ID) {
-          pull();
-        }
-      })
-      .subscribe();
-
-    pull();
-    setInterval(pull, 10000);
-  });
+  console.log('🧠 Motor ADMIN ativo');
 
 })();
 </script>
+
+
+
+
+
+
+
 
 
 </body>
