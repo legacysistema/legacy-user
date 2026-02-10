@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal do Cliente - LG Plataforma</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
-        /* [MANTENHA TODOS OS ESTILOS ANTERIORES AQUI - NÃO ALTERAR] */
-        /* Reset e Estilos Gerais */
         * {
             margin: 0;
             padding: 0;
@@ -42,6 +40,7 @@
             color: var(--light);
             min-height: 100vh;
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
         .container {
@@ -50,7 +49,6 @@
             padding: 20px;
         }
 
-        /* Estilos Glass Neon */
         .glass-card {
             background: var(--glass);
             backdrop-filter: blur(10px);
@@ -67,12 +65,25 @@
             border-color: var(--primary);
         }
 
+        .glass-card-secondary {
+            border-color: rgba(157, 78, 221, 0.3);
+        }
+
+        .glass-card-secondary:hover {
+            box-shadow: var(--shadow), var(--neon-glow-secondary);
+            border-color: var(--secondary);
+        }
+
         .neon-text {
             color: var(--primary);
             text-shadow: 0 0 5px var(--primary);
         }
 
-        /* Botões */
+        .neon-text-secondary {
+            color: var(--secondary);
+            text-shadow: 0 0 5px var(--secondary);
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -99,17 +110,29 @@
             box-shadow: 0 6px 20px rgba(0, 217, 255, 0.5);
         }
 
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(157, 78, 221, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(157, 78, 221, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #cc2255);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+        }
+
         .btn-outline {
             background: transparent;
             color: var(--primary);
             border: 1px solid var(--primary);
         }
 
-        .btn-outline:hover {
-            background: rgba(0, 217, 255, 0.1);
-        }
-
-        /* Formulários */
         .form-group {
             margin-bottom: 20px;
         }
@@ -138,190 +161,312 @@
             box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.2);
         }
 
-        /* Card de Conteúdo */
-        .content-card {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            background: rgba(20, 20, 30, 0.5);
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
-            transition: all 0.3s ease;
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
         }
 
-        .content-card:hover {
-            background: rgba(30, 30, 45, 0.7);
-            transform: translateX(5px);
-        }
-
-        .content-card.link {
-            border-left-color: var(--success);
-        }
-
-        .content-card.alert {
-            border-left-color: var(--danger);
-        }
-
-        .content-card.orientation {
-            border-left-color: var(--secondary);
-        }
-
-        .content-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+        .table th {
             background: rgba(0, 217, 255, 0.1);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
             color: var(--primary);
+            border-bottom: 2px solid rgba(0, 217, 255, 0.3);
         }
 
-        .content-icon.link {
-            background: rgba(0, 204, 136, 0.1);
+        .table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.1);
+        }
+
+        .table tr:hover {
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(0, 204, 136, 0.2);
             color: var(--success);
         }
 
-        .content-icon.alert {
-            background: rgba(255, 51, 102, 0.1);
+        .badge-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(255, 51, 102, 0.2);
             color: var(--danger);
         }
 
-        .content-icon.orientation {
-            background: rgba(157, 78, 221, 0.1);
-            color: var(--secondary);
-        }
-
-        .content-info {
-            flex: 1;
-        }
-
-        .content-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--light);
-        }
-
-        .content-description {
-            color: var(--gray);
-            margin-bottom: 12px;
-        }
-
-        .content-meta {
-            font-size: 14px;
-            color: var(--gray);
-            display: flex;
-            gap: 16px;
-        }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 24px;
-            overflow-x: auto;
-        }
-
-        .tab {
-            padding: 14px 24px;
-            background: transparent;
-            border: none;
-            color: var(--gray);
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .tab:hover {
-            color: var(--light);
-        }
-
-        .tab.active {
+        .badge-info {
+            background: rgba(0, 217, 255, 0.2);
             color: var(--primary);
-            border-bottom-color: var(--primary);
         }
 
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Header */
         .header {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--border);
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
-            color: var(--light);
-        }
-
-        .logo i {
-            color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 15px;
         }
 
-        .user-cpf {
+        .nav-menu {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--light);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
             background: rgba(0, 217, 255, 0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .stat-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow), var(--neon-glow);
+        }
+
+        .stat-card i {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h3 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card p {
+            color: var(--gray);
             font-size: 14px;
         }
 
-        /* Mensagens */
-        .alert {
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .alert-card {
+            border-left: 4px solid;
+            padding: 20px;
+        }
+
+        .alert-card.info {
+            border-left-color: var(--primary);
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .alert-card.warning {
+            border-left-color: var(--warning);
+            background: rgba(255, 170, 0, 0.05);
+        }
+
+        .alert-card.danger {
+            border-left-color: var(--danger);
+            background: rgba(255, 51, 102, 0.05);
+        }
+
+        .alert-card.success {
+            border-left-color: var(--success);
+            background: rgba(0, 204, 136, 0.05);
+        }
+
+        .alert-card h3 {
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            border-left: 4px solid var(--primary);
+            gap: 10px;
         }
 
-        .alert-warning {
-            background: rgba(255, 170, 0, 0.1);
-            border-left-color: var(--warning);
+        .progress-bar {
+            background: rgba(100, 100, 150, 0.2);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 10px;
         }
 
-        .alert-success {
-            background: rgba(0, 204, 136, 0.1);
-            border-left-color: var(--success);
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .alert-danger {
-            background: rgba(255, 51, 102, 0.1);
-            border-left-color: var(--danger);
+        .link-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: var(--glass);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--light);
         }
 
-        /* Login */
+        .link-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow), var(--neon-glow);
+            border-color: var(--primary);
+        }
+
+        .link-card i {
+            font-size: 32px;
+            color: var(--primary);
+        }
+
+        .link-card-content h4 {
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        .link-card-content p {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .timeline-item {
+            padding: 20px;
+            border-left: 3px solid var(--primary);
+            margin-left: 20px;
+            margin-bottom: 20px;
+            background: var(--glass);
+            border-radius: 0 12px 12px 0;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 25px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .timeline-item .date {
+            color: var(--gray);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .timeline-item h4 {
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         .login-container {
-            max-width: 400px;
-            margin: 100px auto;
-            animation: fadeIn 0.8s ease;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-card {
+            max-width: 450px;
+            width: 100%;
         }
 
         .login-header {
@@ -330,573 +475,821 @@
         }
 
         .login-header h1 {
-            font-size: 32px;
+            font-size: 36px;
             margin-bottom: 10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        /* Animações */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        /* Status */
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .status-badge.active {
-            background: rgba(0, 204, 136, 0.2);
-            color: var(--success);
-        }
-
-        .status-badge.expired {
-            background: rgba(255, 51, 102, 0.2);
-            color: var(--danger);
-        }
-
-        /* Links */
-        .external-link {
-            color: var(--primary);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .external-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Responsividade */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            
-            .content-card {
-                flex-direction: column;
-            }
-            
-            .content-icon {
-                align-self: center;
-            }
-        }
-
-        .hidden {
-            display: none !important;
+        .login-header p {
+            color: var(--gray);
         }
 
         .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 217, 255, 0.3);
-            border-radius: 50%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 217, 255, 0.1);
             border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        .message-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message-toast.error {
+            background: var(--danger);
+            color: white;
+        }
+
+        .message-toast.success {
+            background: var(--success);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-menu {
+                justify-content: center;
+            }
+
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Tela de Login -->
-    <div id="loginScreen" class="container">
-        <div class="login-container">
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="glass-card login-card">
             <div class="login-header">
-                <h1><i class="fas fa-user-circle"></i> Portal do Cliente</h1>
-                <p>Acesse suas informações e recursos</p>
+                <h1 class="neon-text">LG Plataforma</h1>
+                <p>Portal do Cliente</p>
             </div>
             
-            <div class="glass-card">
-                <h2 class="neon-text" style="margin-bottom: 20px;">Acesso ao Portal</h2>
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label class="form-label" for="cpf">CPF</label>
-                        <input type="text" id="cpf" class="form-control" placeholder="Digite seu CPF (apenas números)" required>
-                        <small style="color: var(--gray); margin-top: 5px; display: block;">
-                            Informe apenas os números do seu CPF
-                        </small>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;" id="loginBtn">
-                        <i class="fas fa-sign-in-alt"></i> Acessar Portal
-                    </button>
-                </form>
-                <div id="loginMessage" class="alert hidden mt-20"></div>
-            </div>
+            <form id="cpfForm">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-id-card"></i> Digite seu CPF
+                    </label>
+                    <input 
+                        type="text" 
+                        id="cpfInput" 
+                        class="form-control" 
+                        placeholder="000.000.000-00"
+                        maxlength="14"
+                        required
+                    >
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-sign-in-alt"></i> Acessar Portal
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Área do Usuário -->
-    <div id="userArea" class="container hidden">
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="hidden">
+        <!-- Header -->
         <div class="header">
-            <div class="logo">
-                <i class="fas fa-user-circle"></i>
-                <span>Portal do Cliente</span>
-            </div>
-            <div class="user-info">
-                <div class="user-cpf" id="userCpfDisplay"></div>
-                <button class="btn btn-outline" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i> Sair
-                </button>
+            <div class="header-content">
+                <div class="logo">LG Plataforma</div>
+                <div class="user-info">
+                    <span><i class="fas fa-user"></i> <span id="userName">Cliente</span></span>
+                    <button class="btn btn-danger btn-sm" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Sair
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Dashboard do Usuário -->
-        <div class="glass-card fade-in">
-            <h2 class="neon-text" style="margin-bottom: 20px;">
-                <i class="fas fa-tachometer-alt"></i> Meu Painel
-            </h2>
-            
-            <div class="tabs" id="contentTabs">
-                <button class="tab active" data-tab="all">
-                    <i class="fas fa-th"></i> Todos os Itens
+        <!-- Main Content -->
+        <div class="container">
+            <!-- Navigation -->
+            <div class="nav-menu">
+                <button class="nav-btn active" onclick="showSection('dashboard')">
+                    <i class="fas fa-home"></i> Dashboard
                 </button>
-                <button class="tab" data-tab="links">
-                    <i class="fas fa-link"></i> Links Úteis
+                <button class="nav-btn" onclick="showSection('projects')">
+                    <i class="fas fa-project-diagram"></i> Projetos
                 </button>
-                <button class="tab" data-tab="alerts">
+                <button class="nav-btn" onclick="showSection('deadlines')">
+                    <i class="fas fa-calendar-alt"></i> Prazos
+                </button>
+                <button class="nav-btn" onclick="showSection('timeline')">
+                    <i class="fas fa-history"></i> Timeline
+                </button>
+                <button class="nav-btn" onclick="showSection('alerts')">
                     <i class="fas fa-bell"></i> Alertas
                 </button>
-                <button class="tab" data-tab="orientations">
-                    <i class="fas fa-info-circle"></i> Orientações
+                <button class="nav-btn" onclick="showSection('links')">
+                    <i class="fas fa-link"></i> Links
+                </button>
+                <button class="nav-btn" onclick="showSection('profile')">
+                    <i class="fas fa-user"></i> Perfil
                 </button>
             </div>
 
-            <!-- Conteúdo: Todos os Itens -->
-            <div id="all" class="tab-content active">
-                <div id="allContentContainer" class="fade-in">
-                    <!-- Conteúdo será carregado aqui -->
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section active">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </h2>
+
+                <div class="grid grid-3">
+                    <div class="stat-card">
+                        <i class="fas fa-project-diagram neon-text"></i>
+                        <h3 class="neon-text" id="activeProjectsCount">0</h3>
+                        <p>Projetos Ativos</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-calendar-check neon-text-secondary"></i>
+                        <h3 class="neon-text-secondary" id="pendingTasksCount">0</h3>
+                        <p>Prazos Pendentes</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-bell" style="color: var(--warning);"></i>
+                        <h3 style="color: var(--warning);" id="unreadAlertsCount">0</h3>
+                        <p>Alertas Não Lidos</p>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-top: 30px;">
+                    <h3><i class="fas fa-info-circle"></i> Bem-vindo ao Portal do Cliente</h3>
+                    <p style="margin-top: 15px; color: var(--gray);">
+                        Aqui você pode acompanhar todos os seus projetos, prazos, alertas e acessar links importantes.
+                        Navegue pelas seções usando o menu acima.
+                    </p>
                 </div>
             </div>
 
-            <!-- Conteúdo: Links -->
-            <div id="links" class="tab-content">
-                <div id="linksContentContainer" class="fade-in">
-                    <!-- Links serão carregados aqui -->
+            <!-- Projects Section -->
+            <div id="projects" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-project-diagram"></i> Meus Projetos
+                </h2>
+                
+                <div id="projectsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando projetos...</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Conteúdo: Alertas -->
-            <div id="alerts" class="tab-content">
-                <div id="alertsContentContainer" class="fade-in">
-                    <!-- Alertas serão carregados aqui -->
+            <!-- Deadlines Section -->
+            <div id="deadlines" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-alt"></i> Prazos
+                </h2>
+                
+                <div id="deadlinesContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando prazos...</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Conteúdo: Orientações -->
-            <div id="orientations" class="tab-content">
-                <div id="orientationsContentContainer" class="fade-in">
-                    <!-- Orientações serão carregadas aqui -->
+            <!-- Timeline Section -->
+            <div id="timeline" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-history"></i> Linha do Tempo
+                </h2>
+                
+                <div class="glass-card alert-card info">
+                    <h3><i class="fas fa-info-circle"></i> Histórico do Projeto</h3>
+                    <p>Acompanhe todas as atualizações e marcos importantes do seu projeto.</p>
+                </div>
+                
+                <div id="timelineContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando timeline...</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Sem Conteúdo -->
-        <div id="noContentMessage" class="glass-card hidden">
-            <div style="text-align: center; padding: 40px;">
-                <i class="fas fa-inbox" style="font-size: 48px; color: var(--gray); margin-bottom: 20px;"></i>
-                <h3 style="color: var(--light); margin-bottom: 10px;">Nenhum conteúdo disponível</h3>
-                <p style="color: var(--gray);">Não há itens cadastrados para o seu CPF no momento.</p>
+            <!-- Alerts Section -->
+            <div id="alerts" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-bell"></i> Alertas e Notificações
+                </h2>
+                
+                <div id="alertsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando alertas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Links Section -->
+            <div id="links" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-link"></i> Links Úteis
+                </h2>
+                
+                <div class="links-grid grid grid-2" id="linksContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando links...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile" class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-user"></i> Meu Perfil
+                </h2>
+                
+                <div class="glass-card">
+                    <h3>Informações da Conta</h3>
+                    <div style="margin-top: 20px;">
+                        <div class="grid grid-2">
+                            <div>
+                                <p><strong>Nome:</strong> <span id="profileName">-</span></p>
+                                <p><strong>E-mail:</strong> <span id="profileEmail">-</span></p>
+                            </div>
+                            <div>
+                                <p><strong>CPF:</strong> <span id="profileCpf">-</span></p>
+                                <p><strong>Status:</strong> <span id="profileStatus" class="badge badge-success">Ativo</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Sistema de Usuário LG Plataforma
-        // Inicializar quando o DOM estiver carregado
-        document.addEventListener('DOMContentLoaded', function() {
-            // Configuração do Supabase
-            const SUPABASE_URL = 'https://ledpqcynvqbdbccebhbo.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlZHBxY3ludnFiZGJjY2ViaGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODc3MjgsImV4cCI6MjA4NTk2MzcyOH0.s8GOzp4woujGuDc4vK9QXIf3cWLMENUnJfE4lt_YhLg';
-            
-            // Inicializar Supabase - usar namespace diferente para evitar conflito
-            let userSupabase;
-            
-            // Verificar se já existe uma instância global
-            if (window.supabase && window.supabase.auth) {
-                console.log('Usando instância existente do Supabase');
-                userSupabase = window.supabase;
-            } else if (window.supabaseClient) {
-                console.log('Usando instância existente do Supabase (supabaseClient)');
-                userSupabase = window.supabaseClient;
-            } else {
-                console.log('Criando nova instância do Supabase para usuário');
-                userSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script>
+// ========================================
+// CONFIGURAÇÃO SUPABASE
+// ========================================
+const SUPABASE_URL = 'https://ledpqcynvqbdbccebhbo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlZHBxY3ludnFiZGJjY2ViaGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODc3MjgsImV4cCI6MjA4NTk2MzcyOH0.s8GOzp4woujGuDc4vK9QXIf3cWLMENUnJfE4lt_YhLg';
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ========================================
+// TABELAS
+// ========================================
+const TABLES = {
+    clients: 'clientes',
+    projects: 'projetos',
+    deadlines: 'prazos',
+    alerts: 'alertas',
+    links: 'links'
+};
+
+// ========================================
+// ESTADO GLOBAL
+// ========================================
+let currentClient = null;
+let userData = {
+    projects: [],
+    deadlines: [],
+    alerts: [],
+    links: []
+};
+
+// ========================================
+// ELEMENTOS DOM
+// ========================================
+const loginPage = document.getElementById('loginPage');
+const dashboardPage = document.getElementById('dashboardPage');
+const cpfForm = document.getElementById('cpfForm');
+const cpfInput = document.getElementById('cpfInput');
+const logoutBtn = document.getElementById('logoutBtn');
+const userName = document.getElementById('userName');
+
+const profileName = document.getElementById('profileName');
+const profileEmail = document.getElementById('profileEmail');
+const profileCpf = document.getElementById('profileCpf');
+const profileStatus = document.getElementById('profileStatus');
+
+const activeProjectsCount = document.getElementById('activeProjectsCount');
+const pendingTasksCount = document.getElementById('pendingTasksCount');
+const unreadAlertsCount = document.getElementById('unreadAlertsCount');
+
+// ========================================
+// UI
+// ========================================
+function showLoginPage() {
+    loginPage.classList.remove('hidden');
+    dashboardPage.classList.add('hidden');
+}
+
+function showDashboard() {
+    loginPage.classList.add('hidden');
+    dashboardPage.classList.remove('hidden');
+    showSection('dashboard');
+}
+
+function showMessage(text, type = 'error') {
+    const toast = document.createElement('div');
+    toast.className = `message-toast ${type}`;
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ========================================
+// FORMATAÇÃO
+// ========================================
+function formatCPF(cpf) {
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+
+function formatCPFInput(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.slice(0, 11);
+
+    if (value.length > 9) {
+        value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else if (value.length > 6) {
+        value = value.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
+    } else if (value.length > 3) {
+        value = value.replace(/(\d{3})(\d{3})/, '$1.$2');
+    }
+    input.value = value;
+}
+
+function formatDate(dateString) {
+    return dateString ? new Date(dateString).toLocaleDateString('pt-BR') : '-';
+}
+
+// ========================================
+// LOGIN
+// ========================================
+async function handleCpfSubmit(e) {
+    e.preventDefault();
+    const cpf = cpfInput.value.replace(/\D/g, '');
+
+    if (cpf.length !== 11) {
+        showMessage('CPF inválido', 'error');
+        return;
+    }
+
+    const { data, error } = await supabaseClient
+        .from(TABLES.clients)
+        .select('*')
+        .eq('cpf', cpf)
+        .maybeSingle();
+
+    if (error || !data) {
+        showMessage('Cliente não encontrado', 'error');
+        return;
+    }
+
+    currentClient = data;
+    await loadAllData();
+    updateProfile();
+    updateDashboard();
+    showDashboard();
+    showMessage('Login realizado com sucesso!', 'success');
+}
+
+function handleLogout() {
+    location.reload();
+}
+
+// ========================================
+// CARREGAMENTO DE DADOS
+// ========================================
+async function loadAllData() {
+    const id = currentClient.id;
+
+    const [projects, deadlines, alerts, links] = await Promise.all([
+        supabaseClient.from(TABLES.projects).select('*').eq('cliente_id', id),
+        supabaseClient.from(TABLES.deadlines).select('*').eq('cliente_id', id),
+        supabaseClient.from(TABLES.alerts).select('*').eq('cliente_id', id),
+        supabaseClient.from(TABLES.links).select('*').eq('cliente_id', id)
+    ]);
+
+    userData.projects = projects.data || [];
+    userData.deadlines = deadlines.data || [];
+    userData.alerts = alerts.data || [];
+    userData.links = links.data || [];
+
+    renderProjects();
+    renderDeadlines();
+    renderTimeline();
+    renderAlerts();
+    renderLinks();
+}
+
+// ========================================
+// PERFIL & DASHBOARD
+// ========================================
+function updateProfile() {
+    userName.textContent = currentClient.nome;
+    profileName.textContent = currentClient.nome;
+    profileEmail.textContent = currentClient.email || '-';
+    profileCpf.textContent = formatCPF(currentClient.cpf);
+    profileStatus.textContent = 'Ativo';
+}
+
+function updateDashboard() {
+    activeProjectsCount.textContent = userData.projects.length;
+    pendingTasksCount.textContent = userData.deadlines.length;
+    unreadAlertsCount.textContent = userData.alerts.length;
+}
+
+// ========================================
+// RENDERIZAÇÕES
+// ========================================
+function renderProjects() {
+    const c = document.getElementById('projectsContainer');
+    
+    if (!userData.projects.length) {
+        c.innerHTML = `<div class="glass-card alert-card info">
+            <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>Nenhum projeto cadastrado</h3>
+            <p>Seus projetos aparecerão aqui quando forem criados.</p>
+        </div>`;
+        return;
+    }
+    
+    c.innerHTML = userData.projects.map(p => {
+        const statusMap = {
+            'planning': { label: 'Planejamento', class: 'badge-info', icon: 'fa-lightbulb' },
+            'in_progress': { label: 'Em Progresso', class: 'badge-warning', icon: 'fa-spinner' },
+            'completed': { label: 'Concluído', class: 'badge-success', icon: 'fa-check-circle' }
+        };
+        
+        const status = statusMap[p.status] || statusMap['planning'];
+        const progresso = p.progresso || 0;
+        
+        return `
+            <div class="glass-card project-card" style="position: relative; overflow: hidden;">
+                <!-- Barra de progresso de fundo -->
+                <div style="position: absolute; top: 0; left: 0; height: 4px; width: 100%; background: rgba(0, 217, 255, 0.1);">
+                    <div style="height: 100%; width: ${progresso}%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s ease;"></div>
+                </div>
                 
-                // Armazenar globalmente para reuso
-                window.userSupabase = userSupabase;
-            }
-            
-            // Estado da aplicação
-            let currentUser = null;
-            let userContent = [];
-            
-            // Inicializar sistema do usuário
-            initUserSystem(userSupabase);
-            
-            // Inicializar sistema do usuário
-            function initUserSystem(supabaseClient) {
-                setupEventListeners();
-                checkSession();
-                
-                // Funções internas
-                // Configurar listeners
-                function setupEventListeners() {
-                    // Login
-                    document.getElementById('loginForm').addEventListener('submit', function(e) {
-                        handleLogin(e, supabaseClient);
-                    });
-                    
-                    // Logout
-                    document.getElementById('logoutBtn').addEventListener('click', logout);
-                    
-                    // Tabs
-                    document.querySelectorAll('#contentTabs .tab').forEach(tab => {
-                        tab.addEventListener('click', switchTab);
-                    });
-                    
-                    // Formatar CPF durante a digitação
-                    document.getElementById('cpf').addEventListener('input', formatCPF);
-                }
-                
-                // Verificar sessão ativa
-                function checkSession() {
-                    const sessionCpf = localStorage.getItem('user_portal_cpf');
-                    if (sessionCpf) {
-                        currentUser = { cpf: sessionCpf };
-                        showUserArea();
-                        loadUserContent(supabaseClient);
-                    }
-                }
-                
-                // Formatar CPF
-                function formatCPF(e) {
-                    let value = e.target.value.replace(/\D/g, '');
-                    
-                    if (value.length > 11) {
-                        value = value.substring(0, 11);
-                    }
-                    
-                    // Formatar com pontos e traço
-                    if (value.length > 3 && value.length <= 6) {
-                        value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
-                    } else if (value.length > 6 && value.length <= 9) {
-                        value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
-                    } else if (value.length > 9) {
-                        value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
-                    }
-                    
-                    e.target.value = value;
-                }
-                
-                // Limpar formatação do CPF (apenas números)
-                function cleanCPF(cpf) {
-                    return cpf.replace(/\D/g, '');
-                }
-                
-                // Lidar com login
-                async function handleLogin(e, supabaseClient) {
-                    e.preventDefault();
-                    
-                    const cpfInput = document.getElementById('cpf');
-                    const cpf = cleanCPF(cpfInput.value);
-                    
-                    // Validar CPF
-                    if (cpf.length !== 11) {
-                        showLoginMessage('CPF inválido. Digite os 11 números do CPF.', 'danger');
-                        return;
-                    }
-                    
-                    // Mostrar loading
-                    const loginBtn = document.getElementById('loginBtn');
-                    const originalText = loginBtn.innerHTML;
-                    loginBtn.innerHTML = '<span class="loading"></span> Verificando...';
-                    loginBtn.disabled = true;
-                    
-                    try {
-                        // Verificar se há conteúdo para este CPF
-                        const { data, error } = await supabaseClient
-                            .from('user_public_feed')
-                            .select('*')
-                            .eq('cpf', cpf)
-                            .order('created_at', { ascending: false });
-                        
-                        if (error) throw error;
-                        
-                        if (data && data.length > 0) {
-                            // Login bem-sucedido
-                            currentUser = { cpf: cpf };
-                            localStorage.setItem('user_portal_cpf', cpf);
-                            showUserArea();
-                            loadUserContent(supabaseClient);
-                        } else {
-                            showLoginMessage('Nenhum conteúdo disponível para este CPF.', 'warning');
-                        }
-                    } catch (error) {
-                        console.error('Erro ao verificar CPF:', error);
-                        showLoginMessage('Erro ao conectar com o servidor. Tente novamente.', 'danger');
-                    } finally {
-                        loginBtn.innerHTML = originalText;
-                        loginBtn.disabled = false;
-                    }
-                }
-                
-                // Carregar conteúdo do usuário
-                async function loadUserContent(supabaseClient) {
-                    if (!currentUser) return;
-                    
-                    try {
-                        // Buscar conteúdo do usuário
-                        const { data, error } = await supabaseClient
-                            .from('user_public_feed')
-                            .select('*')
-                            .eq('cpf', currentUser.cpf)
-                            .order('created_at', { ascending: false });
-                        
-                        if (error) throw error;
-                        
-                        userContent = data || [];
-                        
-                        // Atualizar interface
-                        updateUserInterface();
-                    } catch (error) {
-                        console.error('Erro ao carregar conteúdo:', error);
-                        showMessage('Erro ao carregar conteúdo. Tente novamente.', 'danger');
-                    }
-                }
-                
-                // Atualizar interface do usuário
-                function updateUserInterface() {
-                    // Atualizar CPF exibido
-                    document.getElementById('userCpfDisplay').textContent = formatCPFDisplay(currentUser.cpf);
-                    
-                    // Mostrar/ocultar mensagem de sem conteúdo
-                    if (userContent.length === 0) {
-                        document.getElementById('noContentMessage').classList.remove('hidden');
-                        document.querySelectorAll('.tab-content').forEach(content => {
-                            content.classList.remove('active');
-                        });
-                        document.getElementById('all').classList.add('active');
-                        document.querySelectorAll('#contentTabs .tab').forEach(tab => {
-                            tab.classList.remove('active');
-                        });
-                        document.querySelector('[data-tab="all"]').classList.add('active');
-                        return;
-                    } else {
-                        document.getElementById('noContentMessage').classList.add('hidden');
-                    }
-                    
-                    // Filtrar conteúdo por tipo
-                    const links = userContent.filter(item => item.type === 'link');
-                    const alerts = userContent.filter(item => item.type === 'alert');
-                    const orientations = userContent.filter(item => item.type === 'orientation');
-                    
-                    // Renderizar conteúdo
-                    renderContent('allContentContainer', userContent);
-                    renderContent('linksContentContainer', links);
-                    renderContent('alertsContentContainer', alerts);
-                    renderContent('orientationsContentContainer', orientations);
-                    
-                    // Ativar tab padrão se a atual estiver vazia
-                    const activeTab = document.querySelector('#contentTabs .tab.active').getAttribute('data-tab');
-                    const activeContainer = document.getElementById(activeTab + 'ContentContainer');
-                    if (activeContainer && activeContainer.children.length === 0 && userContent.length > 0) {
-                        switchToTab('all');
-                    }
-                }
-                
-                // Renderizar conteúdo
-                function renderContent(containerId, items) {
-                    const container = document.getElementById(containerId);
-                    if (!container) return;
-                    
-                    container.innerHTML = '';
-                    
-                    if (items.length === 0) {
-                        container.innerHTML = `
-                            <div class="alert">
-                                <i class="fas fa-info-circle"></i>
-                                <div>
-                                    <p>Nenhum item disponível nesta categoria.</p>
-                                </div>
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    items.forEach(item => {
-                        const card = createContentCard(item);
-                        container.appendChild(card);
-                    });
-                }
-                
-                // Criar card de conteúdo
-                function createContentCard(item) {
-                    const card = document.createElement('div');
-                    card.className = `content-card ${item.type}`;
-                    
-                    // Definir ícone baseado no tipo
-                    let icon = 'fas fa-question-circle';
-                    if (item.type === 'link') icon = 'fas fa-link';
-                    if (item.type === 'alert') icon = 'fas fa-bell';
-                    if (item.type === 'orientation') icon = 'fas fa-info-circle';
-                    
-                    // Verificar se está expirado
-                    const now = new Date();
-                    const endsAt = item.ends_at ? new Date(item.ends_at) : null;
-                    const isExpired = endsAt && endsAt < now;
-                    
-                    // Extrair URL do payload se existir
-                    let url = null;
-                    if (item.payload && typeof item.payload === 'object') {
-                        url = item.payload.url || item.payload.link || null;
-                    } else if (typeof item.payload === 'string') {
-                        try {
-                            const payloadObj = JSON.parse(item.payload);
-                            url = payloadObj.url || payloadObj.link || null;
-                        } catch (e) {
-                            // Não é JSON válido
-                        }
-                    }
-                    
-                    // Formatar data
-                    const createdDate = new Date(item.created_at);
-                    const dateStr = createdDate.toLocaleDateString('pt-BR');
-                    const timeStr = createdDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    
-                    card.innerHTML = `
-                        <div class="content-icon ${item.type}">
-                            <i class="${icon}"></i>
+                <!-- Cabeçalho do Projeto -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; padding-top: 5px;">
+                    <div style="flex: 1;">
+                        <h3 style="color: var(--primary); font-size: 24px; margin-bottom: 8px;">
+                            <i class="fas ${status.icon}" style="margin-right: 10px;"></i>
+                            ${p.nome}
+                        </h3>
+                        <span class="badge ${status.class}" style="font-size: 12px;">
+                            ${status.label}
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 32px; font-weight: 700; color: var(--primary); text-shadow: 0 0 10px var(--primary);">
+                            ${progresso}%
                         </div>
-                        <div class="content-info">
-                            <div class="content-title">${item.title || 'Sem título'}</div>
-                            <div class="content-description">${item.description || ''}</div>
-                            
-                            ${url ? `
-                                <div style="margin-bottom: 12px;">
-                                    <a href="${url}" target="_blank" class="external-link">
-                                        <i class="fas fa-external-link-alt"></i> Acessar Link
-                                    </a>
-                                </div>
-                            ` : ''}
-                            
-                            <div class="content-meta">
-                                <span><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>
-                                ${item.type ? `<span><i class="fas fa-tag"></i> ${item.type}</span>` : ''}
-                                ${isExpired ? '<span class="status-badge expired"><i class="fas fa-clock"></i> Expirado</span>' : ''}
-                                ${!isExpired && endsAt ? `<span><i class="fas fa-clock"></i> Válido até ${new Date(endsAt).toLocaleDateString('pt-BR')}</span>` : ''}
-                            </div>
+                        <div style="font-size: 12px; color: var(--gray);">Progresso</div>
+                    </div>
+                </div>
+                
+                <!-- Descrição -->
+                ${p.descricao ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; border-left: 3px solid var(--primary);">
+                        <p style="color: var(--light); line-height: 1.6;">
+                            ${p.descricao}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                <!-- Informações Adicionais -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 100, 150, 0.2);">
+                    <div>
+                        <div style="color: var(--gray); font-size: 12px; margin-bottom: 5px;">
+                            <i class="fas fa-calendar"></i> Data de Início
                         </div>
-                    `;
+                        <div style="color: var(--light); font-weight: 600;">
+                            ${p.data_inicio ? formatDate(p.data_inicio) : 'Não definida'}
+                        </div>
+                    </div>
                     
-                    return card;
-                }
-                
-                // Trocar tab
-                function switchTab(e) {
-                    const tab = e.target.getAttribute('data-tab');
-                    switchToTab(tab);
-                }
-                
-                function switchToTab(tab) {
-                    // Atualizar tabs
-                    document.querySelectorAll('#contentTabs .tab').forEach(t => {
-                        t.classList.remove('active');
-                    });
-                    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+                    <div>
+                        <div style="color: var(--gray); font-size: 12px; margin-bottom: 5px;">
+                            <i class="fas fa-tasks"></i> Status
+                        </div>
+                        <div style="color: var(--light); font-weight: 600;">
+                            ${status.label}
+                        </div>
+                    </div>
                     
-                    // Atualizar conteúdo
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    document.getElementById(tab).classList.add('active');
-                }
+                    <div>
+                        <div style="color: var(--gray); font-size: 12px; margin-bottom: 5px;">
+                            <i class="fas fa-chart-line"></i> Conclusão
+                        </div>
+                        <div style="color: var(--light); font-weight: 600;">
+                            ${progresso}% completo
+                        </div>
+                    </div>
+                </div>
                 
-                // Mostrar área do usuário
-                function showUserArea() {
-                    document.getElementById('loginScreen').classList.add('hidden');
-                    document.getElementById('userArea').classList.remove('hidden');
-                }
+                <!-- Barra de Progresso Visual -->
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="color: var(--gray); font-size: 13px;">Progresso do Projeto</span>
+                        <span style="color: var(--primary); font-weight: 600; font-size: 14px;">${progresso}%</span>
+                    </div>
+                    <div style="height: 8px; background: rgba(0, 217, 255, 0.1); border-radius: 10px; overflow: hidden;">
+                        <div style="height: 100%; width: ${progresso}%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 10px; transition: width 0.5s ease; box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDeadlines() {
+    const c = document.getElementById('deadlinesContainer');
+    
+    if (!userData.deadlines.length) {
+        c.innerHTML = `<div class="glass-card alert-card info">
+            <i class="fas fa-calendar-check" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>Nenhum prazo cadastrado</h3>
+            <p>Seus prazos aparecerão aqui quando forem criados.</p>
+        </div>`;
+        return;
+    }
+    
+    c.innerHTML = userData.deadlines.map(d => {
+        const statusMap = {
+            'pendente': { label: 'Pendente', class: 'badge-warning', icon: 'fa-clock' },
+            'em_andamento': { label: 'Em Andamento', class: 'badge-info', icon: 'fa-spinner' },
+            'concluido': { label: 'Concluído', class: 'badge-success', icon: 'fa-check-circle' }
+        };
+        
+        const status = statusMap[d.status] || statusMap['pendente'];
+        const dataLimite = new Date(d.data);
+        const hoje = new Date();
+        const diasRestantes = Math.ceil((dataLimite - hoje) / (1000 * 60 * 60 * 24));
+        const atrasado = diasRestantes < 0 && d.status !== 'concluido';
+        
+        return `
+            <div class="glass-card" style="border-left: 4px solid ${atrasado ? 'var(--danger)' : 'var(--primary)'};">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 8px;">
+                            <i class="fas ${status.icon}" style="margin-right: 8px;"></i>
+                            ${d.titulo}
+                        </h4>
+                        <span class="badge ${status.class}">${status.label}</span>
+                    </div>
+                    ${atrasado ? `
+                        <div style="text-align: right;">
+                            <span class="badge badge-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Atrasado
+                            </span>
+                        </div>
+                    ` : ''}
+                </div>
                 
-                // Mostrar tela de login
-                function showLoginScreen() {
-                    document.getElementById('loginScreen').classList.remove('hidden');
-                    document.getElementById('userArea').classList.add('hidden');
-                    document.getElementById('loginForm').reset();
-                    document.getElementById('loginMessage').classList.add('hidden');
-                }
+                ${d.descricao ? `
+                    <p style="color: var(--gray); margin: 15px 0; line-height: 1.6;">
+                        ${d.descricao}
+                    </p>
+                ` : ''}
                 
-                // Logout
-                function logout() {
-                    currentUser = null;
-                    userContent = [];
-                    localStorage.removeItem('user_portal_cpf');
-                    showLoginScreen();
-                }
-                
-                // Mostrar mensagem de login
-                function showLoginMessage(message, type) {
-                    const messageDiv = document.getElementById('loginMessage');
-                    messageDiv.textContent = message;
-                    messageDiv.className = `alert alert-${type}`;
-                    messageDiv.classList.remove('hidden');
-                }
-                
-                // Mostrar mensagem geral
-                function showMessage(message, type) {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = `alert alert-${type}`;
-                    messageDiv.style.position = 'fixed';
-                    messageDiv.style.top = '20px';
-                    messageDiv.style.right = '20px';
-                    messageDiv.style.zIndex = '1000';
-                    messageDiv.style.maxWidth = '300px';
-                    messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(100, 100, 150, 0.2);">
+                    <div>
+                        <div style="color: var(--gray); font-size: 12px; margin-bottom: 5px;">
+                            <i class="fas fa-calendar"></i> Data Limite
+                        </div>
+                        <div style="color: ${atrasado ? 'var(--danger)' : 'var(--light)'}; font-weight: 600;">
+                            ${formatDate(d.data)}
+                        </div>
+                    </div>
                     
-                    document.body.appendChild(messageDiv);
-                    
-                    setTimeout(() => {
-                        messageDiv.remove();
-                    }, 5000);
-                }
-                
-                // Formatar CPF para exibição
-                function formatCPFDisplay(cpf) {
-                    const cleaned = cleanCPF(cpf);
-                    if (cleaned.length !== 11) return cpf;
-                    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-                
-                // Recarregar conteúdo periodicamente (a cada 30 segundos)
-                setInterval(() => {
-                    if (currentUser) {
-                        loadUserContent(supabaseClient);
-                    }
-                }, 30000);
-            }
+                    <div>
+                        <div style="color: var(--gray); font-size: 12px; margin-bottom: 5px;">
+                            <i class="fas fa-hourglass-half"></i> Tempo Restante
+                        </div>
+                        <div style="color: ${atrasado ? 'var(--danger)' : diasRestantes <= 3 ? 'var(--warning)' : 'var(--success)'}; font-weight: 600;">
+                            ${atrasado ? `${Math.abs(diasRestantes)} dias atrasado` : diasRestantes === 0 ? 'Hoje!' : `${diasRestantes} dias`}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAlerts() {
+    const c = document.getElementById('alertsContainer');
+    
+    if (!userData.alerts.length) {
+        c.innerHTML = `<div class="glass-card alert-card info">
+            <i class="fas fa-bell" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>Nenhum alerta cadastrado</h3>
+            <p>Alertas e notificações aparecerão aqui.</p>
+        </div>`;
+        return;
+    }
+    
+    c.innerHTML = userData.alerts.map(a => {
+        const tipoMap = {
+            'info': { icon: 'fa-info-circle', color: 'var(--primary)' },
+            'warning': { icon: 'fa-exclamation-triangle', color: 'var(--warning)' },
+            'error': { icon: 'fa-times-circle', color: 'var(--danger)' },
+            'success': { icon: 'fa-check-circle', color: 'var(--success)' }
+        };
+        
+        const tipo = tipoMap[a.tipo] || tipoMap['info'];
+        
+        return `
+            <div class="glass-card alert-card ${a.tipo || 'info'}" style="border-left: 4px solid ${tipo.color};">
+                <div style="display: flex; align-items: start; gap: 15px;">
+                    <i class="fas ${tipo.icon}" style="font-size: 32px; color: ${tipo.color}; margin-top: 5px;"></i>
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--primary); font-size: 18px; margin-bottom: 8px;">
+                            ${a.titulo}
+                        </h4>
+                        <p style="color: var(--light); line-height: 1.6; margin-bottom: 12px;">
+                            ${a.descricao || a.mensagem || 'Sem descrição'}
+                        </p>
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <small style="color: var(--gray); display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-clock"></i>
+                                ${a.criado_em ? formatDate(a.criado_em) : 'Data não disponível'}
+                            </small>
+                            <span class="badge badge-${a.tipo || 'info'}" style="text-transform: uppercase; font-size: 10px;">
+                                ${a.tipo || 'INFO'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderLinks() {
+    const c = document.getElementById('linksContainer');
+    
+    if (!userData.links.length) {
+        c.innerHTML = `<div class="glass-card alert-card info">
+            <i class="fas fa-link" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>Nenhum link cadastrado</h3>
+            <p>Links úteis aparecerão aqui.</p>
+        </div>`;
+        return;
+    }
+    
+    c.innerHTML = userData.links.map(l => `
+        <a href="${l.url}" target="_blank" class="link-card" style="display: flex; align-items: center; gap: 20px; text-decoration: none; padding: 20px;">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-external-link-alt" style="font-size: 24px; color: white;"></i>
+            </div>
+            <div class="link-card-content" style="flex: 1;">
+                <h4 style="color: var(--primary); font-size: 18px; margin-bottom: 5px;">
+                    ${l.titulo}
+                </h4>
+                <p style="color: var(--gray); font-size: 14px; margin-bottom: 8px;">
+                    ${l.descricao || 'Clique para acessar'}
+                </p>
+                <div style="color: var(--primary); font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-link"></i>
+                    <span style="word-break: break-all;">${l.url}</span>
+                </div>
+            </div>
+            <i class="fas fa-arrow-right" style="color: var(--primary); font-size: 20px; margin-left: auto;"></i>
+        </a>
+    `).join('');
+}
+
+function renderTimeline() {
+    const c = document.getElementById('timelineContainer');
+    
+    // Combinar projetos e prazos em uma timeline
+    const eventos = [];
+    
+    // Adicionar projetos
+    userData.projects.forEach(p => {
+        if (p.data_inicio) {
+            eventos.push({
+                data: new Date(p.data_inicio),
+                tipo: 'projeto',
+                titulo: p.nome,
+                descricao: p.descricao || 'Projeto iniciado',
+                icon: 'fa-project-diagram',
+                color: 'var(--primary)'
+            });
+        }
+    });
+    
+    // Adicionar prazos
+    userData.deadlines.forEach(d => {
+        eventos.push({
+            data: new Date(d.data),
+            tipo: 'prazo',
+            titulo: d.titulo,
+            descricao: d.descricao || 'Prazo definido',
+            icon: 'fa-calendar-check',
+            color: 'var(--warning)',
+            status: d.status
         });
-    </script>
+    });
+    
+    // Ordenar por data (mais recente primeiro)
+    eventos.sort((a, b) => b.data - a.data);
+    
+    if (!eventos.length) {
+        c.innerHTML = `<div class="glass-card alert-card info">
+            <i class="fas fa-clock" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>Nenhum evento na timeline</h3>
+            <p>Eventos de projetos e prazos aparecerão aqui.</p>
+        </div>`;
+        return;
+    }
+    
+    c.innerHTML = eventos.map(evento => `
+        <div class="timeline-item" style="border-left-color: ${evento.color};">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                    <div class="date" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <i class="fas fa-calendar" style="color: var(--primary);"></i>
+                        ${formatDate(evento.data.toISOString())}
+                    </div>
+                    <h4 style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas ${evento.icon}" style="color: ${evento.color};"></i>
+                        ${evento.titulo}
+                    </h4>
+                </div>
+                <span class="badge ${evento.tipo === 'projeto' ? 'badge-info' : 'badge-warning'}" style="text-transform: capitalize;">
+                    ${evento.tipo}
+                </span>
+            </div>
+            <p style="color: var(--gray); margin-top: 10px;">
+                ${evento.descricao}
+            </p>
+            ${evento.status ? `
+                <div style="margin-top: 10px;">
+                    <span class="badge ${evento.status === 'concluido' ? 'badge-success' : evento.status === 'em_andamento' ? 'badge-info' : 'badge-warning'}">
+                        ${evento.status === 'concluido' ? 'Concluído' : evento.status === 'em_andamento' ? 'Em Andamento' : 'Pendente'}
+                    </span>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// ========================================
+// NAVEGAÇÃO
+// ========================================
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+    document.getElementById(id)?.classList.add('active');
+    document.querySelector(`.nav-btn[onclick="showSection('${id}')"]`)?.classList.add('active');
+}
+
+// ========================================
+// INIT
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    cpfInput.addEventListener('input', () => formatCPFInput(cpfInput));
+    cpfForm.addEventListener('submit', handleCpfSubmit);
+    logoutBtn.addEventListener('click', handleLogout);
+    showLoginPage();
+});
+</script>
+
+
+
 </body>
 </html>
